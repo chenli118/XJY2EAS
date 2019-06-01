@@ -27,7 +27,6 @@ namespace XJY2EAS
             string connString = "";
             if (connectionString.Length == 0) connString= connectionString = ConfigurationManager.AppSettings["ConString"];
             if (name != null) connectionString = connString = name; else connString = connectionString;
-             //connectionString = (name == null&& connectionString.Length==0) ? connString = ConfigurationManager.AppSettings["ConString"] : connString= connectionString;
             var connection = new SqlConnection(connString);
             connection.Open();
             return connection;
