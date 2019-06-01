@@ -107,7 +107,7 @@ namespace XJY2EAS
                 conStr = conStr.Replace("master",dbName);
                 SqlMapperUtil.GetOpenConnection(conStr);
                 ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s2, null);
-                string s3 = "CREATE TABLE dbo.kjqj    (      ProjectID VARCHAR(100) NOT NULL    , KJDate    VARCHAR(4) NOT NULL    , CONSTRAINT PK_KJQJ PRIMARY KEY(ProjectID, KJDate)    )";               
+                string s3 = "CREATE TABLE  ";               
                 ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s3, null);
 
 
