@@ -20,6 +20,8 @@ namespace XJY2EAS
         private string auditYear = "";
         private string accoutNumber = "";
         private int importType = 0;
+        private string dbName = "";
+        string conStr = ConfigurationManager.AppSettings["ConString"];
         private List<string> Importfiles = new List<string>();
         public Form1()
         {
@@ -73,9 +75,13 @@ namespace XJY2EAS
                 s == Path.GetFileNameWithoutExtension(p).ToLower()
                 || (Path.GetFileNameWithoutExtension(p).ToLower() != "jzpz" &&
                     Path.GetFileNameWithoutExtension(p).ToLower().IndexOf("jzpz") > -1)));
-            string dbName = GetAccountInfo(files.Where(x =>
+            dbName = GetAccountInfo(files.Where(x =>
                     Path.GetFileName(x).ToLower() == "ztsjbf.ini").FirstOrDefault());
-
+            if (dbName.Length == 0)
+            {
+                MessageBox.Show("没找到项目信息文件");
+                return;
+            }
             InitDataBase(dbName);
 
             Array.ForEach(dbFiles.ToArray(), (string dbfile) =>
@@ -93,13 +99,12 @@ namespace XJY2EAS
 
             #endregion
 
-            MessageBox.Show("导数完成！");
+            MessageBox.Show("新纪元数据库创建完成！");
         }
         private async void PD2SqlDB(string filepath,String dbName)
         {
 
-            string filename = Path.GetFileNameWithoutExtension(filepath);
-            string conStr = ConfigurationManager.AppSettings["ConString"];
+            string filename = Path.GetFileNameWithoutExtension(filepath);           
             conStr = conStr.Replace("master", dbName);
             try
             {
@@ -112,8 +117,7 @@ namespace XJY2EAS
                     return;
                 StringBuilder strSpt =
                     new StringBuilder(string.Format("IF object_id('{0}') IS NOT NULL  drop table  {1}", dt.TableName, dt.TableName));
-                strSpt.AppendLine(" create    table   " + dt.TableName + "(" + Environment.NewLine);
-                //所有表都要添加pid字段
+                strSpt.AppendLine(" create    table   " + dt.TableName + "(" + Environment.NewLine); 
                 //strSpt.AppendLine("PID " + "varchar(1000)  COLLATE Chinese_PRC_CS_AS_KS_WS  null,");
                 for (int i = 0; i < columns.Length; i++)
                 {
@@ -185,7 +189,7 @@ namespace XJY2EAS
         }
         private void InitDataBase(string dbName)
         {
-            string conStr = ConfigurationManager.AppSettings["ConString"];
+            conStr = ConfigurationManager.AppSettings["ConString"];
             SqlMapperUtil.GetOpenConnection(conStr);
             string exsitsDB = "select count(1) from sys.sysdatabases where name =@dbName";
             int result = SqlMapperUtil.SqlWithParamsSingle<int>(exsitsDB,new { dbName = dbName });
@@ -195,9 +199,8 @@ namespace XJY2EAS
                 string s1 = " create database "+dbName;
                 int ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s1, null);
                 string s2 = "CREATE TABLE dbo.kjqj    (      ProjectID VARCHAR(100) NOT NULL    , KJDate    VARCHAR(4) NOT NULL    , CONSTRAINT PK_KJQJ PRIMARY KEY(ProjectID, KJDate)    )";
-                conStr = conStr.Replace("master",dbName);
-                SqlMapperUtil.GetOpenConnection(conStr);
-                ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s2, null);
+                conStr = conStr.Replace("master",dbName);                
+                ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s2, null,conStr);
                // string s3 = "CREATE TABLE  ";               
                 //ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s3, null);
 
@@ -239,6 +242,32 @@ namespace XJY2EAS
                 string kjqjInsert = "delete dbo.kjqj where Projectid='{0}'   insert  dbo.kjqj   select '{0}','{1}'";
                 //this.DataAccess.ExecuteSql(string.Format(kjqjInsert, this.accoutNumber, accYear));
             }
+        }
+
+        private void Button2_Click(object sender, EventArgs e)
+        {
+            CreateMidTables();
+        }
+
+        private void CreateMidTables()
+        {
+            if (dbName.Length == 0)
+            {
+                DirectoryInfo di = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                var accountinfofile = di.Parent.GetFiles("*.ini", SearchOption.AllDirectories)[0];
+                dbName = GetAccountInfo(accountinfofile.FullName);
+                if (dbName.Length == 0) {
+                    MessageBox.Show("没找到项目信息文件");
+                    return;
+                }
+            }
+            conStr = conStr.Replace("master", dbName);
+            SqlMapperUtil.InsertUpdateOrDeleteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "01.Create6BasicTables.Sql")), null, conStr);
+        }
+
+        private void Button3_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

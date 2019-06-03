@@ -113,5 +113,14 @@
       <Name>ParadoxReader</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="SqlScripts\01.Create6BasicTables.Sql" />
+    <Content Include="SqlScripts\03.t_itemclass2projecttype.sql" />
+    <Content Include="SqlScripts\02.xjyxm2easproject.sql" />
+    <Content Include="SqlScripts\04.xjykmxmye2account.sql" />
+    <Content Include="SqlScripts\05.xjypzk2Voucher.sql" />
+    <Content Include="SqlScripts\06.xjyItemDetail2FDetailandAux.sql" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
