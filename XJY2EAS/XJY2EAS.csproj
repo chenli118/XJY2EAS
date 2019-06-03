@@ -107,6 +107,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\ParadoxReader\ParadoxReader.csproj">
+      <Project>{8d3adf35-fe64-4ba5-a3bc-955b912ada9b}</Project>
+      <Name>ParadoxReader</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
