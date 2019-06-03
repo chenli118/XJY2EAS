@@ -1,5 +1,6 @@
 declare  @ProjectID varchar(100) ='EAS_'  ,@dataType int=0 --0 本期，1前期,-1期后     
- 
+        
+--如果不存在return  
 if object_id(t_itemclass) is null  
  return;  
   		
