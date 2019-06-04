@@ -80,6 +80,7 @@
     <Compile Include="Models\Tbwlzl.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SqlServerHelper.cs" />
     <Compile Include="UnZip001File.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
@@ -120,7 +121,11 @@
     <Content Include="SqlScripts\02.xjyxm2easproject.sql" />
     <Content Include="SqlScripts\04.xjykmxmye2account.sql" />
     <Content Include="SqlScripts\05.xjypzk2Voucher.sql" />
+    <Content Include="SqlScripts\05.xjypzk2Voucher4BasicAccount.sql" />
     <Content Include="SqlScripts\06.xjyItemDetail2FDetailandAux.sql" />
+    <Content Include="SqlScripts\CreateProjectDatabaseStore.sql" />
+    <Content Include="SqlScripts\CreateProjectDatabaseTable.sql" />
+    <Content Include="SqlScripts\00.EAS_FnAndTables.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

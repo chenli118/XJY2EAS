@@ -192,7 +192,14 @@ namespace XJY2EAS
                 return connection.Execute(sql, (object)parms);
             }
         }
-
+        public static int CMDExcute(string sql, dynamic parms, string connectionName = null)
+        {
+            using (SqlConnection connection = GetOpenConnection(connectionName))
+            {
+                SqlCommand sqlCommand = new SqlCommand(sql, connection);
+                return sqlCommand.ExecuteNonQuery();
+            }
+        }
         /// <summary>
         /// Insert update or delete stored proc.
         /// </summary>

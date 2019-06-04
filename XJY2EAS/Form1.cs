@@ -198,12 +198,13 @@ namespace XJY2EAS
             {
                 string s1 = " create database "+dbName;
                 int ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s1, null);
-                string s2 = "CREATE TABLE dbo.kjqj    (      ProjectID VARCHAR(100) NOT NULL    , KJDate    VARCHAR(4) NOT NULL    , CONSTRAINT PK_KJQJ PRIMARY KEY(ProjectID, KJDate)    )";
-                conStr = conStr.Replace("master",dbName);                
-                ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s2, null,conStr);
-               // string s3 = "CREATE TABLE  ";               
-                //ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s3, null);
+                conStr = conStr.Replace("master",dbName);  
 
+
+
+                string kjqjInsert = "delete dbo.kjqj where Projectid='{0}'   insert  dbo.kjqj   select '{0}','{1}'";               
+                SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\00.EAS_FnAndTables.Sql")),  conStr);
+                SqlServerHelper.ExcuteSql(string.Format(kjqjInsert, dbName, auditYear),  conStr); 
 
 
             }
@@ -238,9 +239,7 @@ namespace XJY2EAS
                 });
 
                 return sb.ToString();
-                //导入kjqj
-                string kjqjInsert = "delete dbo.kjqj where Projectid='{0}'   insert  dbo.kjqj   select '{0}','{1}'";
-                //this.DataAccess.ExecuteSql(string.Format(kjqjInsert, this.accoutNumber, accYear));
+          
             }
         }
 
@@ -262,7 +261,13 @@ namespace XJY2EAS
                 }
             }
             conStr = conStr.Replace("master", dbName);
-            SqlMapperUtil.InsertUpdateOrDeleteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "01.Create6BasicTables.Sql")), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\01.Create6BasicTables.Sql")), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\02.xjyxm2easproject.Sql")), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\03.t_itemclass2projecttype.Sql")), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\04.xjykmxmye2account.Sql")), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\05.xjypzk2Voucher.Sql")), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\06.xjyItemDetail2FDetailandAux.Sql")).Replace("EAS_", dbName), null, conStr);
+
         }
 
         private void Button3_Click(object sender, EventArgs e)

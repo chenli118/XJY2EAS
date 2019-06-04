@@ -1,6 +1,6 @@
 declare  @ProjectID varchar(100) ='EAS_'  ,@dataType int=0 --0 本期，1前期,-1期后     
  
-if object_id(t_itemclass) is null  
+if object_id('t_itemclass') is null  
  return;  
   		
 IF OBJECT_ID('tempdb..#tmp') IS NOT NULL        
@@ -25,8 +25,7 @@ DECLARE @FNAME VARCHAR(1000)=''
     FOR xml path ('')), 1, 1,'')        
  FROM A1;  
 
-select @FNAME=isnull(fname,space(0)) from #tmp        
-        print '@@FNAME: '+@FNAME  -- 调试  @FNAME
+select @FNAME=isnull(fname,space(0)) from #tmp                
 		    
 if(dbo.isnullempty(@FNAME,'')!='') begin        
                
