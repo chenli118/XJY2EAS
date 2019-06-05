@@ -1,5 +1,5 @@
  
-declare  @ProjectID varchar(1000)  ='EAS_' ,@jzpzname varchar(max),@cCount int =0,@dSql varchar(max),@expzkName varchar(1000)
+declare  @AccountInfo varchar(1000)  ='AccountInfo_' ,@jzpzname varchar(max),@cCount int =0,@dSql varchar(max),@expzkName varchar(1000)
 declare  @ix_ppzh_index varchar(100)='ix_ppzh_'+replace(cast(newid() as varchar(50)),'-','');   
 
 
@@ -22,9 +22,10 @@ select Pzk_TableName INTO #Expzk   from pzk where Pzk_TableName!='jzpz' and Pzk_
 alter table #Expzk add ID int IDENTITY(1,1)		
   
  select @cCount= count(1) from #Expzk
-
+ declare @cIndex int =0;
 while  (@cCount>0)begin  
-    select  @expzkName =Pzk_TableName from  #Expzk where ID =@cCount
+	set @cIndex=@cIndex+1
+    select  @expzkName =Pzk_TableName from  #Expzk where ID =@cIndex
 
 	set @dSql ='
    insert EAS_Voucher ([date],Pzh,djh,accountcode,zy,jfje,dfje,jfsl,dfsl,zdr,FDetailID,DFKM)  
@@ -44,7 +45,7 @@ end
   
 --end  
 declare @year varchar(4)  
-select top 1 @year=kjdate from kjqj where ProjectID=@ProjectID  
+select top 1 @year=kjdate from kjqj where ProjectID=@AccountInfo  
   
 if @year is null  
  return;  

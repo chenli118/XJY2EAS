@@ -246,6 +246,7 @@ namespace XJY2EAS
         private void Button2_Click(object sender, EventArgs e)
         {
             CreateMidTables();
+            MessageBox.Show("转换中间表创建成功!");
         }
 
         private void CreateMidTables()
@@ -265,14 +266,14 @@ namespace XJY2EAS
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\02.xjyxm2easproject.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\03.t_itemclass2projecttype.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\04.xjykmxmye2account.Sql")), null, conStr);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\05.xjypzk2Voucher.Sql")), null, conStr);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\06.xjyItemDetail2FDetailandAux.Sql")).Replace("EAS_", dbName), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\05.xjypzk2Voucher.Sql")).Replace("AccountInfo_",dbName), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\06.xjyItemDetail2FDetailandAux.Sql")).Replace("_EAS_", dbName), null, conStr);
 
         }
 
         private void Button3_Click(object sender, EventArgs e)
         {
-
+            MessageBox.Show("开发中");
         }
     }
 }

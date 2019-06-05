@@ -1,14 +1,14 @@
-declare  @ProjectID varchar(100) ='EAS_'  ,@dataType int=0 --0 本期，1前期,-1期后     
+declare  @ProjectID varchar(100) ='_EAS_'  ,@dataType int=0 --0 本期，1前期,-1期后     
  
 if object_id('t_itemclass') is null  
  return;  
   		
 IF OBJECT_ID('tempdb..#tmp') IS NOT NULL        
  DROP TABLE #tmp        
-create table #tmp(fname varchar(1000))        
+create table #tmp(fname varchar(max))        
         
-DECLARE @FNAME VARCHAR(1000)=''        
-		DECLARE @fid varchar(100)        
+DECLARE @FNAME VARCHAR(max)=''        
+		DECLARE @fid varchar(1000)        
  SELECT @fid= stuff ((SELECT ';'+CAST([FItemId] AS VARCHAR)        
    FROM  t_itemclass      
     FOR xml path ('')), 1, 1,'')        
@@ -30,7 +30,7 @@ select @FNAME=isnull(fname,space(0)) from #tmp
 if(dbo.isnullempty(@FNAME,'')!='') begin        
                
  declare @kjdate varchar(10);        
- select top 1 @kjdate=kjdate from dbo.kjqj where ProjectID= 'EAS_'     
+ select top 1 @kjdate=kjdate from dbo.kjqj where ProjectID= '_EAS_'     
     
  DECLARE @spl VARCHAR(10)=';'    
  IF EXISTS(Select 1 from  t_fzye)begin   
@@ -39,10 +39,10 @@ if(dbo.isnullempty(@FNAME,'')!='') begin
    ProjectCode varchar(1000) COLLATE Chinese_PRC_CS_AS_KS_WS NULL)    
         
   declare @tt table(f varchar(1000));     
-      
+
   insert @tt     
-  SELECT 'ltrim(rtrim(ISNULL('+name+',space(0))))'    from sys.columns p where object_id = OBJECT_ID('t_itemdetail') and name not in ('FDetailID','Xmdm') 
-  
+   select Code from  dbo.fn_SplitTSQL(@FNAME,'+') 
+    
   while exists(select 1 from @tt )begin    
    declare @xcode varchar(100)    
    select @xcode =f from @tt    
@@ -56,20 +56,20 @@ if(dbo.isnullempty(@FNAME,'')!='') begin
       where  '+@xcode+'!=space(0)'    
    exec(@x1)    
    delete @tt where f=@xcode    
-  -- print @xcode 
+
   end    
-     
+   
   declare @dtype int=0      
   SET ROWCOUNT 5000;    
   declare @ii int=0    
   WHILE 1 = 1    
   BEGIN    
    set @ii =0;    
-   delete dbo.AuxiliaryFDetail where projectid='EAS_'    and datatype=@dtype  and datayear=@kjdate    
+   delete dbo.AuxiliaryFDetail where projectid='_EAS_'    and datatype=@dtype  and datayear=@kjdate    
    set @ii+=@@ROWCOUNT    
        
    if(@dtype=0)    
-    delete dbo.tbaux where projectid='EAS_'    
+    delete dbo.tbaux where projectid='_EAS_'    
    set @ii+=@@ROWCOUNT    
    IF @ii = 0    
     BREAK;    
@@ -81,18 +81,15 @@ if(dbo.isnullempty(@FNAME,'')!='') begin
   insert #p1    
   SELECT  DISTINCT kmdm,projectcode,FDetailID from #itemdetailtable  where projectcode!=space(0)     
      if OBJECT_ID('tempdb..#p2')  is not null drop table #p2
-  SELECT distinct 'EAS_' as ProjectID,    idet.accountcode,idet.AuxiliaryCode,     isnull(xm.xmmc,space(0)) as AuxiliaryName,xmye.ncye as Sqqmye,0 as jfje,0 as dfje 
+  SELECT distinct '_EAS_' as ProjectID,    idet.accountcode,idet.AuxiliaryCode,     isnull(xm.xmmc,space(0)) as AuxiliaryName,xmye.ncye as Sqqmye,0 as jfje,0 as dfje 
     INTO #p2   FROM (select distinct accountcode,AuxiliaryCode from #p1) idet   
   
   join  xm xm   on LTRIM(rtrim(xm.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS=idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS   
       join  xmye xmye   on idet.accountcode COLLATE Chinese_PRC_CS_AS_KS_WS=ltrim(rtrim(xmye.kmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS   
-	    and idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS=LTRIM(rtrim(xmye.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS   --
---group by idet.accountcode,idet.AuxiliaryCode,xm.xmmc    
+	    and idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS=LTRIM(rtrim(xmye.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS  
     
   alter table #p2 add ID int IDENTITY(1,1)   
- -- select count(*) from #p1
-   --select  count(*) from #p2
-      
+
   declare @leve int=1000    
   declare @ix int=1    
   declare @ixend int=@leve     
@@ -100,10 +97,10 @@ if(dbo.isnullempty(@FNAME,'')!='') begin
   while (1=1)begin    
    set @ii =0;    
    insert dbo.AuxiliaryFDetail(projectid,accountcode,AuxiliaryCode,FDetailID,DataType,DataYear)    
-   select 'EAS_',accountcode,AuxiliaryCode,FDetailID,@dtype,@kjdate from #p1 a    
+   select '_EAS_',accountcode,AuxiliaryCode,FDetailID,@dtype,@kjdate from #p1 a    
     where (ID BETWEEN @ix and @ixend)     
     and not exists(select 1 from dbo.AuxiliaryFDetail     
-     where projectid='EAS_' COLLATE Chinese_PRC_CS_AS_KS_WS     
+     where projectid='_EAS_' COLLATE Chinese_PRC_CS_AS_KS_WS     
       and accountcode=a.accountcode COLLATE Chinese_PRC_CS_AS_KS_WS    
       and AuxiliaryCode=a.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS    
       and FDetailID=a.FDetailID    
@@ -115,7 +112,12 @@ if(dbo.isnullempty(@FNAME,'')!='') begin
    if(@dtype=0)    
     insert dbo.TBAux(ProjectID,fscode, AccountCode, AuxiliaryCode, AuxiliaryName, Sqqmye, jfje, dfje,qmye,kmsx,tbgrouping)    
     SELECT ProjectID,space(0), AccountCode, AuxiliaryCode,AuxiliaryName,Sqqmye,jfje,dfje,0,0,AccountCode     
-     FROM  #p2 where ID BETWEEN @ix and @ixend    
+     FROM  #p2 a where ID BETWEEN @ix and @ixend   
+	 and not exists(select 1 from dbo.AuxiliaryFDetail     
+     where projectid='_EAS_' COLLATE Chinese_PRC_CS_AS_KS_WS     
+      and accountcode=a.accountcode COLLATE Chinese_PRC_CS_AS_KS_WS    
+      and AuxiliaryCode=a.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS    
+     )   
        
    set @ii+=@@ROWCOUNT    
        
@@ -129,5 +131,4 @@ if(dbo.isnullempty(@FNAME,'')!='') begin
 
  end
 
- --select count(1) from AuxiliaryFDetail
- --select count(1) from TBAux
+
