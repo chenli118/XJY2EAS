@@ -104,6 +104,7 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Content Include="SqlScripts\070.AccountClass.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -123,6 +124,7 @@
     <Content Include="SqlScripts\05.xjypzk2Voucher.sql" />
     <Content Include="SqlScripts\05.xjypzk2Voucher4BasicAccount.sql" />
     <Content Include="SqlScripts\06.xjyItemDetail2FDetailandAux.sql" />
+    <Content Include="SqlScripts\07.Convet_voucher_account_project.sql" />
     <Content Include="SqlScripts\CreateProjectDatabaseStore.sql" />
     <Content Include="SqlScripts\CreateProjectDatabaseTable.sql" />
     <Content Include="SqlScripts\00.EAS_FnAndTables.sql" />

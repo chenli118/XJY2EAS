@@ -1,4 +1,5 @@
 ﻿
+using Dapper;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,7 +19,9 @@ namespace XJY2EAS
     public partial class Form1 : Form
     {
         private string auditYear = "";
+        private string projectid = "";
         private string accoutNumber = "";
+        private string clientID = "";
         private int importType = 0;
         private string dbName = "";
         string conStr = ConfigurationManager.AppSettings["ConString"];
@@ -196,18 +199,16 @@ namespace XJY2EAS
              
             if (result ==0)
             {
-                string s1 = " create database "+dbName;
-                int ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s1, null);
-                conStr = conStr.Replace("master",dbName);  
-
-
-
-                string kjqjInsert = "delete dbo.kjqj where Projectid='{0}'   insert  dbo.kjqj   select '{0}','{1}'";               
-                SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\00.EAS_FnAndTables.Sql")),  conStr);
-                SqlServerHelper.ExcuteSql(string.Format(kjqjInsert, dbName, auditYear),  conStr); 
-
+                string s1 = " create database ["+dbName+"]";
+                int ret = SqlMapperUtil.InsertUpdateOrDeleteSql(s1, null); 
 
             }
+            conStr = conStr.Replace("master", dbName);
+            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\00.EAS_FnAndTables.Sql")), conStr);
+            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\01.Create6BasicTables.Sql")), conStr);
+           
+            string kjqjInsert = "delete dbo.kjqj where Projectid='{0}'   insert  dbo.kjqj   select '{0}','{1}'";
+            SqlServerHelper.ExcuteSql(string.Format(kjqjInsert, dbName, auditYear), conStr);
         }
 
         private string  GetAccountInfo(string filepath)
@@ -227,6 +228,8 @@ namespace XJY2EAS
                         auditYear = accYear = arr[1];
                     if (arr[0] == "帐套编号")
                         accoutNumber = arr[1];
+                    if (arr[0] == "帐套名称")
+                        clientID = arr[1];
                 }
                 byte[] asciiBytes = Encoding.ASCII.GetBytes(accoutNumber);
                 StringBuilder sb = new StringBuilder();
@@ -248,32 +251,58 @@ namespace XJY2EAS
             CreateMidTables();
             MessageBox.Show("转换中间表创建成功!");
         }
-
-        private void CreateMidTables()
+        private string GetDBNmame()
         {
             if (dbName.Length == 0)
             {
                 DirectoryInfo di = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
                 var accountinfofile = di.Parent.GetFiles("*.ini", SearchOption.AllDirectories)[0];
                 dbName = GetAccountInfo(accountinfofile.FullName);
-                if (dbName.Length == 0) {
+                if (dbName.Length == 0)
+                {
                     MessageBox.Show("没找到项目信息文件");
-                    return;
+                    return string .Empty;
                 }
             }
-            conStr = conStr.Replace("master", dbName);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\01.Create6BasicTables.Sql")), null, conStr);
+            return dbName;
+        }
+        private void CreateMidTables()
+        {
+            GetDBNmame();
+             conStr = conStr.Replace("master", dbName);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\02.xjyxm2easproject.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\03.t_itemclass2projecttype.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\04.xjykmxmye2account.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\05.xjypzk2Voucher.Sql")).Replace("AccountInfo_",dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\06.xjyItemDetail2FDetailandAux.Sql")).Replace("_EAS_", dbName), null, conStr);
+            //AutomaticProcessingForUpdateProject  ProcessKmdm_jdToKmdm   
 
         }
 
         private void Button3_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("开发中");
+            dbName =GetDBNmame();
+          
+            conStr = conStr.Replace("master", dbName);
+            string period = GetPeriod(conStr);
+            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\070.AccountClass.sql")).Replace("_EAS_", dbName), conStr);
+
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\07.Convet_voucher_account_project.sql")).Replace("_EAS_", dbName), null, conStr);
+         
+
+            //var p = new DynamicParameters();
+            //p.Add("@ProjectID",dbName);
+            //p.Add("@Clientid", clientID);
+            //p.Add("@period", period);
+            //SqlMapperUtil.InsertUpdateOrDeleteStoredProc("BulkImportLocalPeriodData", p,conStr);
+            MessageBox.Show("导入成功！");
+        }
+
+        private string GetPeriod(string conStr)
+        {
+            string qStr = "select  MAX(pz_date) from jzpz";
+            DateTime p = SqlMapperUtil.SqlWithParamsSingle<DateTime>(qStr,null, conStr);
+            return  p.ToShortDateString();
         }
     }
 }

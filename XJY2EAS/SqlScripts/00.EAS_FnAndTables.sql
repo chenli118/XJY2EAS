@@ -1,4 +1,14 @@
 
+
+if exists (select 1
+            from  sysobjects
+           where  id = object_id('kjqj')
+            and   type = 'U')
+   drop table kjqj
+
+CREATE TABLE kjqj    (      ProjectID VARCHAR(100) NOT NULL    , KJDate    VARCHAR(4) NOT NULL    , CONSTRAINT PK_KJQJ PRIMARY KEY(ProjectID, KJDate)    )
+go
+
 IF EXISTS (SELECT * FROM dbo.sysobjects WHERE id = OBJECT_ID(N'[dbo].[ISNullEmpty]') AND xtype IN ( N'FN', N'IF', N'TF' ) ) 
    BEGIN
        DROP FUNCTION [dbo].[ISNullEmpty]
@@ -73,50 +83,475 @@ if @SourceSql<>''
 insert @temp values(@SourceSql)
 return 
 end
-go
-if exists (select 1
-            from  sysobjects
-           where  id = object_id('kjqj')
-            and   type = 'U')
-   drop table kjqj
 
-CREATE TABLE kjqj    (      ProjectID VARCHAR(100) NOT NULL    , KJDate    VARCHAR(4) NOT NULL    , CONSTRAINT PK_KJQJ PRIMARY KEY(ProjectID, KJDate)    )
 
-if exists (select 1
-            from  sysobjects
-           where  id = object_id('AuxiliaryFDetail')
-            and   type = 'U')
-   drop table AuxiliaryFDetail
+GO
+IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'PRO_THROW')
+   BEGIN
+       DROP  Procedure  PRO_THROW
+	END
+GO
+/********************************************************************************
+  Database  : EAS
+  Copyright : 2010 Huapu (Beijing)
+  Customer  : 
+  Project   : EAS -异常处理
+  Created   : 2011/05/24 by dengll,rshibin
+  Version   : 1.0.8
+********************************************************************************/
 
-create table AuxiliaryFDetail (
-   projectid            varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
-   Accountcode          varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
-   AuxiliaryCode        varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
-   FDetailID            int                  not null,
-   DataType             int                  not null,
-   DataYear             int                  not null,
-   constraint PK_AUXILIARYFDETAIL primary key (projectid, Accountcode, AuxiliaryCode, FDetailID, DataYear)
-)
+Create PROCEDURE dbo.PRO_THROW
+		@projectid varchar(100),
+		@ErrorProcedure1	varchar(100)=''
+    AS  
+BEGIN  
+      
+    SET NOCOUNT ON;  
+        DECLARE   
+        @ErrorMessage    NVARCHAR(4000),  
+        @ErrorNumber     INT,  
+        @ErrorSeverity   INT,  
+        @ErrorState      INT,  
+        @ErrorLine       INT,  
+        @ErrorProcedure  NVARCHAR(200);  
+        SELECT   
+        @ErrorNumber = ERROR_NUMBER(),  
+        @ErrorSeverity = ERROR_SEVERITY(),  
+        @ErrorState = ERROR_STATE(),  
+        @ErrorLine = ERROR_LINE(), 
+        @ErrorProcedure = ISNULL(ISNULL(ERROR_PROCEDURE(), '-'),@ErrorProcedure1);  
+        SELECT @ErrorMessage = N'Error %d, Level %d, State %d, Procedure %s, Line %d, ' + 'Message: '+ ERROR_MESSAGE();  
+      
+	  EXEC dbo.LogWrongInfo @projectid,@ErrorProcedure
 
-if exists (select 1
-            from  sysobjects
-           where  id = object_id('TBAux')
-            and   type = 'U')
-   drop table TBAux
+    RAISERROR (  
+        @ErrorMessage,   
+        @ErrorSeverity,   
+        1,                 
+        @ErrorNumber,  
+        @ErrorSeverity,  
+        @ErrorState,  
+        @ErrorProcedure,  
+        @ErrorLine  
+        );  
+      
+END  
 
-create table TBAux (
-   ProjectID            varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
-   AccountCode          varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
-   AuxiliaryCode        varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
-   AuxiliaryName        varchar(100)         collate Chinese_PRC_CI_AS not null,
-   FSCode               varchar(50)          collate Chinese_PRC_CS_AS_KS_WS not null,
-   kmsx                 varchar(100)         collate Chinese_PRC_CI_AS not null,
-   YEFX                 int                  not null default (1),
-   TBGrouping           nvarchar(50)         collate Chinese_PRC_CS_AS_KS_WS not null,
-   Sqqmye               decimal(20,2)        not null default (0),
-   Qqccgz               decimal(20,2)        not null default (0),
-   jfje                 decimal(20,2)        not null default (0),
-   dfje                 decimal(20,2)        not null default (0),
-   qmye                 decimal(20,2)        not null default (0),
-   constraint PK_TBAUX primary key (ProjectID, AccountCode, AuxiliaryCode)
-)
+
+GO
+IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'LogWrongInfo')
+   BEGIN
+       DROP  Procedure  LogWrongInfo
+	END
+GO
+
+CREATE PROC LogWrongInfo
+	@pid	 VARCHAR(1000),
+
+	--@ERROR_NUMBER	int,--返回错误号
+	--@ERROR_SEVERITY	int,--返回严重性
+	--@ERROR_STATE		int,--返回错误状态号
+	@ERROR_PROCEDURE	VARCHAR(255)--返回出现错误的存储过程或 触发器的名称
+	--@ERROR_LINE	int,--返回导致错误的例程中的行 号
+	--@ERROR_MESSAGE	VARCHAR(1000)	--返回错误消息的完整文本
+AS 
+BEGIN
+if (OBJECT_id('LogTable') is NULL)	
+BEGIN	--create table logtable
+	CREATE TABLE LogTable
+	( 
+	  ID              int identity(1,1),--错误序号
+	  Projectid	VARCHAR(1000),
+	  ErrorDateTime	DATETIME NOT NULL,
+	  ErrorNumber     int,--错误号
+	  ErrorSeverity   int,--严重性
+	  ErrorState      int,--错误状态号
+	  ErrorProducure  varchar(255),--出现错误的存储过程或 触发器的名称
+	  ErrorLine       int,--导致错误的例程中的行号
+	  ErrorMessage    varchar(1000)--错误消息的完整文本
+)END
+
+INSERT INTO LogTable values(@pid,GETDATE(),ERROR_NUMBER(),ERROR_SEVERITY(),ERROR_STATE(),@ERROR_PROCEDURE,ERROR_LINE(),ERROR_MESSAGE())
+
+END
+
+
+GO
+IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'BulkImportLocalPeriodData')
+   BEGIN
+       DROP  Procedure  BulkImportLocalPeriodData
+	END
+GO
+
+CREATE PROCEDURE [dbo].BulkImportLocalPeriodData
+	@ProjectID	varchar(100)
+	,@Clientid	varchar(100)
+	,@period	datetime	--本期项目截止日
+AS
+BEGIN TRY	
+--BEGIN	TransAction
+SET NOCOUNT ON
+SET XACT_ABORT ON
+
+	declare @sql	nvarchar(max)
+	declare @ProjectType        nvarchar(1000)=@ProjectID+'ProjectType';
+	declare @Project            nvarchar(1000)=@ProjectID+'Project';
+	declare @Account            nvarchar(1000)=@ProjectID+'Account';
+	declare @Voucher            nvarchar(1000)=@ProjectID+'Voucher';
+	
+	declare	@upyearpid varchar(100),@currentyearpid	varchar(100)
+	select @upyearpid=upperyearProjectid,@currentyearpid=currentyearpid 
+		from neweasv5..projectsinfo	where projectid=@ProjectID
+	
+	--本年前期--上年度
+	create table #lastacc (accountcode varchar(1000) COLLATE Chinese_PRC_CS_AS_KS_WS	NULL,syjz int)
+	if(@currentyearpid is not null and @currentyearpid!='')begin
+		insert #lastacc
+		select accountcode ,syjz from dbo.Account with(nolock) where Projectid=@currentyearpid
+	end else if(@upyearpid is not null and @upyearpid!='')begin
+		insert #lastacc
+		select accountcode ,syjz from dbo.Account with(nolock) where Projectid=@upyearpid
+	end 
+	
+	create table	#tmp	(ProjectID varchar(100),period	datetime)
+	insert	#tmp	
+	select @ProjectID,@period
+
+	set @sql='
+	
+	SET ROWCOUNT 10000;
+    WHILE 1 = 1
+    BEGIN
+	declare @ii int=0;
+		
+		delete dbo.ProjectType	where	ProjectID='''+@ProjectID+'''
+		set @ii+=@@ROWCOUNT
+		delete dbo.Project		where	ProjectID='''+@ProjectID+'''
+		set @ii+=@@ROWCOUNT
+		delete dbo.Account		where	ProjectID='''+@ProjectID+'''
+		set @ii+=@@ROWCOUNT
+		delete from dbo.TBVOUCHER	where ProjectID='''+@ProjectID+'''
+		set @ii+=@@ROWCOUNT
+		IF @ii = 0
+			BREAK;
+	END
+    SET ROWCOUNT 0;
+
+	declare	@currentyearPeriodEndDate	datetime=space(0)
+	declare @currentyearpid	varchar(100)
+	select @currentyearpid=currentyearpid
+		from neweasv5..projectsinfo	where projectid='''+@ProjectID+'''
+	
+	if len(ISNULL(@currentyearpid,space(0)))>0
+		select @currentyearPeriodEndDate=periodenddate from neweasv5..projectsinfo 
+																		where projectid=@currentyearpid	
+	
+	insert	ProjectType(ProjectID,typecode,typename)
+	select distinct '''+@ProjectID+''',typecode,typename from '+@ProjectType+'
+
+	insert	Project(ProjectID,typecode,projectcode,projectname,uppercode,jb,ismx)
+	select distinct '''+@ProjectID+''',typecode,projectcode,isnull(projectname,space(0)),uppercode,jb,ismx from '+@Project+'
+
+	select DISTINCT	a.accountcode,ac.syjz
+		into #tmp222
+			from '+@Account+' a 
+			inner join	neweasv5.dbo.Accountclass ac with(nolock)
+			on a.Accountname like ac.AccountName+''%''
+			where a.jb=1	
+	
+	insert	#tmp222
+	select	DISTINCT a.accountcode,b.syjz
+			from '+@Account+' a 
+			inner join	#tmp222	b 
+			on	left(a.accountcode,len(b.accountcode))=b.accountcode
+			where a.jb>1
+
+	insert	Account(ProjectID,[AccountCode],[AccountName],[jd],[hsxms],[TypeCode],[IsMx],[Ncye],[Jfje],[Dfje],[Ncsl],jb,syjz)
+	select	distinct '''+@ProjectID+''',a.[AccountCode],[AccountName],[jd],[hsxms],[TypeCode],[IsMx],
+											sum([Ncye]),sum([Jfje]),sum([Dfje]),sum([Ncsl]),jb,isnull(isnull(t1.syjz,t.syjz),0)syjz
+		from '+@Account+'	a
+		left join	#tmp222	t
+		on a.AccountCode=t.accountcode
+		left join	#lastacc	t1
+		on a.AccountCode=t1.accountcode
+			group by a.[AccountCode],[AccountName],[jd],[hsxms],[TypeCode],[IsMx],JB,t.syjz,t1.syjz
+	
+	select '''+@Clientid+''' as Clientid,'''+@ProjectID+''' as ProjectID,IncNo,Date, year(Date)*100+month(Date) as Period,Pzlx,Pzh,Djh,AccountCode,ProjectCode,Zy,Jfje,Dfje,Jfsl,Dfsl,
+			zdr,dfkm,FDetailID,0 as fsje,0 as Hl,0 as jd
+		into #p1
+		from '+@Voucher+'	,#tmp
+		where	[date]<=#tmp.period	and year([date])=year(#tmp.period)
+	
+	--分段审计
+	if (len(isnull(@currentyearPeriodEndDate,space(0)))>0)begin
+		Truncate table  #p1
+		insert	 #p1
+		select '''+@Clientid+''' as Clientid,'''+@ProjectID+''' as ProjectID,IncNo,Date, year(Date)*100+month(Date) as Period,Pzlx,Pzh,Djh,AccountCode,ProjectCode,Zy,Jfje,Dfje,Jfsl,Dfsl,
+			zdr,dfkm,FDetailID,0 as fsje,0 as Hl,0 as jd
+		from '+@Voucher+'	,#tmp
+		where	[date]<=#tmp.period	and [date]>@currentyearPeriodEndDate	and year([date])=year(#tmp.period)	
+	end
+	
+	alter table #p1 add ID int IDENTITY(1,1)
+
+	declare @leve int=10000
+	declare @ix int=1
+	declare @ixend int=@leve 
+	while (1=1)begin
+		insert	dbo.TBVOUCHER(Clientid,ProjectID,IncNo,Date,Period,Pzlx,Pzh,Djh,AccountCode,ProjectCode,Zy,Jfje,Dfje,Jfsl,Dfsl,zdr,dfkm,FDetailID,fsje,Hl,jd)
+		select Clientid,ProjectID,IncNo,Date,Period,Pzlx,Pzh,Djh,AccountCode,ProjectCode,Zy,Jfje,Dfje,Jfsl,Dfsl,zdr,dfkm,FDetailID,
+				case when jfje<>0	then 1 else -1 end *(Jfje+Dfje) as fsje,Hl,
+				case when jfje<>0	then 1 else -1 end	as jd
+			 from #p1			where id BETWEEN @ix	and @ixend
+		
+		if @@ROWCOUNT=0
+			break;
+		set @ix+=@leve 
+		set	@ixend+=@leve 
+	end
+
+	'
+	exec(@sql)
+	
+	update dbo.tbwlzl		set	AgeAnalysis=0,BalanceAnalysis=0	where projectid=@ProjectID
+	
+	--更新account.uppercode
+	exec dbo.UpdateAccountUpperCodeLevel1 @ProjectID
+	
+	exec dbo.UpdateAccountPeriod @ProjectID,0
+
+	set @sql='
+	drop table	'+@ProjectType+'
+	drop table	'+@Project+'
+	drop table	'+@Account+'
+	drop table	'+@Voucher+'
+	'
+	exec (@sql)
+	
+	--Commit TransAction
+end try
+begin catch
+	
+	--ROLLBACK TransAction
+	EXEC DBO.[PRO_THROW] @ProjectID,'BulkImportLocalPeriodData'
+end catch
+
+
+GO
+IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'UpdateAccountUpperCodeLevel1')
+   BEGIN
+       DROP  Procedure  UpdateAccountUpperCodeLevel1
+	END
+GO
+/********************************************************************************
+  Database  : EAS
+  Copyright : 2010 Huapu (Beijing)
+  Customer  : 
+  Project   : EAS -更新Account中的UppderCode，jb,ISmx字段值  STEP TWO
+  Created   : 2011/05/24 by dengll,rshibin
+  Version   : 1.0.8
+********************************************************************************/
+CREATE Procedure UpdateAccountUpperCodeLevel1
+	@ProjectID nvarchar(50)
+AS
+
+BEGIN TRY
+--BEGIN	TransAction
+SET NOCOUNT ON
+SET XACT_ABORT ON
+
+declare	@km	varchar(1000)=@ProjectID+'km'
+UPDATE ACCOUNT SET UpperCode=NULL WHERE ProjectID=@ProjectID;
+
+declare	@isFParentID	int=0;
+if exists(select * 
+	from syscolumns 
+	where id=object_id(@km) and lower([name])='FParentID')
+	set	@isFParentID=1;
+
+--如果存在FParentid字段列可以按新纪元的数据找上下级关系.by dengll 20180120
+IF	(@isFParentID=1)begin
+	declare	@sql	nvarchar(max)
+	set	@sql='
+		
+		----提前获取更新锁,这个更新不启任何更新作用
+		UPDATE DBO.ACCOUNT SET Attribute=1
+		WHERE ProjectID='''+@ProjectID+''' AND 1!=1
+
+		update	a set a.UpperCode=c.kmdm_jd
+		from	dbo.account	a
+		left	join	'+@km+'	b
+		on a.accountcode	COLLATE Chinese_PRC_CS_AS_KS_WS	=b.kmdm_jd	COLLATE Chinese_PRC_CS_AS_KS_WS
+		left	join	'+@km+'	c
+		on	b.FParentID	COLLATE Chinese_PRC_CS_AS_KS_WS=c.FAccountID	COLLATE Chinese_PRC_CS_AS_KS_WS
+		where	a.projectid='''+@ProjectID+'''
+	'
+
+	exec(@sql)
+end 
+else begin
+--如果新纪元没有FParentID需要自己分析数据上下级关系
+set nocount on
+
+DECLARE @minLen INT
+SELECT @minLen=MIN(LEN(accountCode)) FROM dbo.ACCOUNT with(nolock) WHERE ProjectID=@projectid
+;
+DECLARE @a1 TABLE(ID int IDENTITY(1,1),accountcode VARCHAR(100) COLLATE Chinese_PRC_CS_AS_KS_WS,uppercode VARCHAR(100) COLLATE Chinese_PRC_CS_AS_KS_WS,jb INT)
+	;
+INSERT @a1
+SELECT accountcode,null,1
+			FROM dbo.ACCOUNT with(nolock) WHERE ProjectID=@projectid AND LEN(accountcode)=@minLen
+
+DECLARE @a2 TABLE(accountcode VARCHAR(100)COLLATE Chinese_PRC_CS_AS_KS_WS,lens int)
+
+INSERT @a2
+SELECT DISTINCT accountcode,len(accountcode)lens FROM dbo.Account with(nolock) WHERE ProjectID=@projectid	GROUP BY accountcode
+DECLARE @jb INT=0
+WHILE (1=1)BEGIN
+	;
+	WITH a3 AS (
+		SELECT * from	@a2	WHERE accountcode NOT IN (SELECT accountcode FROM @a1))
+	,a2 AS (SELECT * FROM a3	WHERE lens <= (SELECT MIN(lens)lens FROM a3))
+
+	INSERT @a1		
+	SELECT  a.AccountCode,aa.accountcode AS uppercode,aa.jb+1 AS jb 
+	FROM  a2 a
+	INNER JOIN @a1 aa
+	ON  a.AccountCode LIKE aa.accountcode+'%'
+	WHERE   aa.jb=@jb+1  
+	IF @@ROWCOUNT=0
+		BREAK;
+	SET @jb=@jb+1	
+END
+
+--update account
+declare @leve int=1000
+declare @ix int=1
+declare @ixend int=@leve 
+
+while (1=1)begin
+	update a set a.uppercode=b.uppercode
+		from	dbo.Account  a
+		inner join (select * from 	@a1 where id BETWEEN @ix	and @ixend)b
+		on a.AccountCode collate Chinese_PRC_CS_AS_KS_WS=b.accountcode collate Chinese_PRC_CS_AS_KS_WS
+		where a.projectid=@ProjectID
+	
+	if @@ROWCOUNT=0
+		break;
+	set @ix+=@leve 
+	set	@ixend+=@leve 
+end
+
+
+---补充处理uppercode为Null的accountcode, 主要是由于accountcode长短不统一导致
+DECLARE @a3 TABLE (accountcode VARCHAR (100) COLLATE Chinese_PRC_CS_AS_KS_WS, 
+	uppercode VARCHAR (100) COLLATE Chinese_PRC_CS_AS_KS_WS, 
+	jb INT)
+
+INSERT @a3
+SELECT accountcode,NULL,jb FROM dbo.ACCOUNT with(nolock) WHERE ProjectID=@projectid and Jb>1 AND UpperCode IS NULL
+
+IF EXISTS(SELECT 1 FROM @A3)BEGIN
+
+	DECLARE @a4 TABLE (accountcode VARCHAR (100)  COLLATE Chinese_PRC_CS_AS_KS_WS, 
+		uppercode VARCHAR (100)  COLLATE Chinese_PRC_CS_AS_KS_WS, 
+		jb INT)
+	
+	CREATE TABLE #account (ID int IDENTITY(1,1),accountcode VARCHAR(100) COLLATE Chinese_PRC_CS_AS_KS_WS,
+		uppercode VARCHAR(100) COLLATE Chinese_PRC_CS_AS_KS_WS,jb INT)
+	
+	INSERT @a4
+	SELECT accountcode,uppercode,jb FROM dbo.ACCOUNT WHERE len(accountcode)<(SELECT min(len(accountcode)) FROM @a3)
+
+	;WITH a1 AS(
+		SELECT accountcode,uppercode,jb FROM @a4
+		UNION ALL
+		SELECT a.accountcode,b.accountcode AS uppercode,a.jb FROM	@a3 a 
+		inner JOIN  dbo.ACCOUNT 	b	with(nolock)
+		ON a.accountcode!=b.accountcode AND
+			 a.accountcode LIKE b.accountcode+'%'
+		where a.jb=b.jb+1	and b.projectid=@ProjectID
+	)
+
+	insert #account
+	select accountcode,uppercode,jb from a1	--where  AccountCode LIKE '6602%';
+
+	set @leve =1000
+	set @ix =1
+	set @ixend =@leve 
+
+	while (1=1)begin
+		update a set a.uppercode=b.uppercode
+			from	dbo.Account  a
+			inner join (select * from 	#account where id BETWEEN @ix	and @ixend)b
+			on a.AccountCode collate Chinese_PRC_CS_AS_KS_WS=b.accountcode collate Chinese_PRC_CS_AS_KS_WS
+			where a.projectid=@ProjectID
+	
+		if @@ROWCOUNT=0
+			break;
+		set @ix+=@leve 
+		set	@ixend+=@leve 
+	end
+	drop table #account
+end	
+
+end
+
+--Commit TransAction
+end try
+begin catch
+	EXEC DBO.[PRO_THROW] @ProjectID,'UpdateAccountUpperCodeLevel1'
+end catch
+
+
+GO
+IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'UpdateAccountPeriod')
+   BEGIN
+       DROP  Procedure  UpdateAccountPeriod
+	END
+GO
+
+CREATE  PROCEDURE [dbo].UpdateAccountPeriod  
+ @ProjectID varchar(100),  
+ @dateType int  
+AS  
+BEGIN TRY   
+--BEGIN TransAction  
+SET NOCOUNT ON  
+SET XACT_ABORT ON  
+  
+declare @PeriodTable table(Period int,StartDate datetime,EndDate datetime)  
+declare @i int=1;  
+declare @kjdate varchar(10);  
+select top 1 @kjdate=kjdate from dbo.kjqj --where ProjectID=@ProjectID  
+while(@i<=12)begin  
+ declare @date varchar(10)  
+ if(@i>9)  
+  set @date=@kjdate+cast(@i as varchar(2))+'01'  
+ else   
+  set @date=@kjdate+'0'+cast(@i as varchar(2))+'01'  
+  
+ INSERT @PeriodTable  
+ select cast(CONVERT(char(6),@date,112) as int),   
+ convert(varchar(10),DATEADD(mm, DATEDIFF(mm,0,@date), 0),111),  
+ CONVERT(varchar(10),DATEADD(ms,-3,DATEADD(mm, DATEDIFF(m,0,@date)+1, 0)),111)  
+ set @i=@i+1  
+end  
+  
+if(@dateType!=0)  
+delete dbo.accountperiod where ProjectID=@ProjectID   
+  and DateType=@dateType and year(StartDate)=year(@kjdate)  
+else   
+ delete dbo.accountperiod where ProjectID=@ProjectID and DateType=@dateType  
+  
+insert into dbo.accountperiod(ProjectID,accountperiod,Period,StartDate,EndDate,DateType,currentyearPID)  
+select @ProjectID,B.Period,0, B.StartDate, B.EndDate,@dateType ,@ProjectID  
+from  @PeriodTable B where not exists  
+(select  A.accountperiod from  dbo.accountperiod A where  B.period = A.accountperiod )  
+--Commit TransAction  
+end try  
+begin catch  
+--ROLLBACK TransAction  
+ EXEC DBO.[PRO_THROW] @ProjectID,'UpdateAccountPeriod'  
+end catch  
+  
