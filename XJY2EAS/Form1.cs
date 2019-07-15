@@ -31,7 +31,16 @@ namespace XJY2EAS
             InitializeComponent();
             string[] xjytables = { "km", "kmye", "xm", "xmye", "bm", "bmye", "wl", "wlye", "t_fzye", "t_itemclass", "t_itemdetail", "jzpz", "pzk" };
             Importfiles.AddRange(xjytables);
-
+            Point point = new Point(100, 300);
+            //var v = c1RadialMenu1.Visible;
+            //var b= c1RadialMenu1.Expanded;
+           // c1RadialMenu1.HideMenu();
+           // c1RadialMenu1.UseAnimation = true;
+            //c1RadialMenu1.InitializeLifetimeService();
+            //this.Controls.Add();
+            //var a = c1RadialMenu1.Container;
+           // c1RadialMenu1.CenterOnScreen =  this.PointToClient(point);
+           // c1RadialMenu1.ShowMenu(this,point,false);
 
         }
 
@@ -166,24 +175,7 @@ namespace XJY2EAS
                 _ParadoxTable.Dispose();
                 _ParadoxTable = null;
 
-                using (SqlConnection connection = new SqlConnection(conStr))
-                {
-                    using (SqlBulkCopy copy = new SqlBulkCopy(connection))
-                    {
-                        copy.DestinationTableName = dt.TableName;
-
-                        foreach (DataColumn column in dt.Columns)
-                        {
-                            copy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(column.ColumnName, column.ColumnName));
-                        }
-
-                        connection.Open();
-                        copy.BulkCopyTimeout = 0;
-                        await copy.WriteToServerAsync(dt);
-                        connection.Close();
-                    }
-
-                }
+                SqlServerHelper.SqlBulkCopy(dt, conStr);
             }
             catch (Exception ex)
             {
@@ -207,8 +199,10 @@ namespace XJY2EAS
             SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\00.EAS_FnAndTables.Sql")), conStr);
             SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\01.Create6BasicTables.Sql")), conStr);
            
-            string kjqjInsert = "delete dbo.kjqj where Projectid='{0}'   insert  dbo.kjqj   select '{0}','{1}'";
-            SqlServerHelper.ExcuteSql(string.Format(kjqjInsert, dbName, auditYear), conStr);
+            string kjqjInsert = "delete dbo.kjqj where Projectid='{0}'  " +
+                " insert  dbo.kjqj(ProjectID,CustomerCode,CustomerName,BeginDate,EndDate,KJDate)" +
+                "  select '{0}','{1}','{1}','{2}','{3}','{4}'";
+            SqlServerHelper.ExcuteSql(string.Format(kjqjInsert, dbName,clientID,DateTime.Parse(auditYear+"-01-01"), DateTime.Parse(auditYear + "-12-31"), auditYear), conStr);
         }
 
         private string  GetAccountInfo(string filepath)
@@ -273,6 +267,7 @@ namespace XJY2EAS
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\02.xjyxm2easproject.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\03.t_itemclass2projecttype.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\04.xjykmxmye2account.Sql")), null, conStr);
+            
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\05.xjypzk2Voucher.Sql")).Replace("AccountInfo_",dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\06.xjyItemDetail2FDetailandAux.Sql")).Replace("_EAS_", dbName), null, conStr);
             //AutomaticProcessingForUpdateProject  ProcessKmdm_jdToKmdm   
@@ -286,15 +281,17 @@ namespace XJY2EAS
             conStr = conStr.Replace("master", dbName);
             string period = GetPeriod(conStr);
             SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\070.AccountClass.sql")).Replace("_EAS_", dbName), conStr);
-
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\07.Convet_voucher_account_project.sql")).Replace("_EAS_", dbName), null, conStr);
-         
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\08.Update_syjz_fllx.sql")).Replace("_EAS_", dbName), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\09.init_tbdetail.sql")).Replace("_EAS_", dbName), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\10.UpdateProject4tbvoucher.sql")).Replace("_EAS_", dbName), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\11.InitTBAux.sql")).Replace("_EAS_", dbName), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\12.Updatedfjfje_tbdetail_tbaux.sql")).Replace("_EAS_", dbName), null, conStr);
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\13.UpdateTbQqccgz.sql")).Replace("_EAS_", dbName), null, conStr);
 
             //var p = new DynamicParameters();
-            //p.Add("@ProjectID",dbName);
-            //p.Add("@Clientid", clientID);
-            //p.Add("@period", period);
-            //SqlMapperUtil.InsertUpdateOrDeleteStoredProc("BulkImportLocalPeriodData", p,conStr);
+            //p.Add("@ProjectID", dbName);   
+            //SqlMapperUtil.InsertUpdateOrDeleteStoredProc("ByFllxUpdateTbAccAndTbAuxQqccgz", p, conStr);
             MessageBox.Show("导入成功！");
         }
 
@@ -303,6 +300,185 @@ namespace XJY2EAS
             string qStr = "select  MAX(pz_date) from jzpz";
             DateTime p = SqlMapperUtil.SqlWithParamsSingle<DateTime>(qStr,null, conStr);
             return  p.ToShortDateString();
+        }
+
+        private void C1Command1_Click(object sender, C1.Win.C1Command.ClickEventArgs e)
+        {
+            dbName = GetDBNmame();
+
+            conStr = conStr.Replace("master", dbName);
+
+            InitProject(conStr);
+           
+            InitAccount(conStr);
+            return;
+            InitVoucher();
+            InitFdetail();
+            InitTbDetail();
+            InitTBAux();
+            InitTBFS();
+
+
+
+
+            return;
+
+
+            DataTable auxfdetail = new DataTable();
+            auxfdetail.Columns.Add("Accountcode");
+            auxfdetail.Columns.Add("AuxiliaryCode");
+            auxfdetail.Columns.Add("FdetailID");
+
+
+            string itemclass = "select * from t_itemclass";
+            var  tab_ic = SqlMapperUtil.SqlWithParams<dynamic>(itemclass, null, conStr);
+
+            List<string> xmField = new List<string>();
+            foreach (var iid in tab_ic)
+            {
+                xmField.Add("F" + iid.FItemClassID);
+            }
+
+            string sql1  = "select  * from t_itemdetail  t join t_fzye f on t.FDetailID = f.FDetailID  ";
+            var d1 = SqlMapperUtil.SqlWithParams<dynamic>(sql1, null, conStr);
+
+
+
+
+            foreach (var d in d1)
+            {
+                Array.ForEach(xmField.ToArray(),f=>{
+
+                    foreach (var xv in d)
+                    {
+                        if (xv.Key == f)
+                        {
+                            if (!string.IsNullOrWhiteSpace(xv.Value))
+                            {
+                               DataRow dr1 =  auxfdetail.NewRow();
+                                dr1["Accountcode"] = d.Kmdm;
+                                dr1["AuxiliaryCode"] = xv.Value;
+                                dr1["FdetailID"] = d.FDetailID;
+
+                                auxfdetail.Rows.Add(dr1);
+                            }
+                        }
+                    }
+
+                });
+            }
+
+            string conStr2 = "server = 192.168.1.33; uid = sa; pwd = r9eGKrtD; database = Szmz; Max Pool Size=1200; ";
+
+            string sql2 = " Select * from AuxiliaryFDetail where ProjectID = 'AudSzmz_3_201812'  ";
+            dynamic d2 = SqlMapperUtil.SqlWithParams<dynamic>(sql2, null, conStr2);
+
+
+        }
+
+        private void InitTBFS()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void InitTBAux()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void InitTbDetail()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void InitFdetail()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void InitVoucher()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void InitAccount(string conStr)
+        {
+            DataTable accountTable = new DataTable();
+            accountTable.TableName = "ACCOUNT";
+            accountTable.Columns.Add("ProjectID");
+            accountTable.Columns.Add("AccountCode");
+            accountTable.Columns.Add("UpperCode");
+            accountTable.Columns.Add("AccountName");
+            accountTable.Columns.Add("Attribute",typeof(int));
+            accountTable.Columns.Add("Jd", typeof(int));
+            accountTable.Columns.Add("Hsxms", typeof(int));
+            accountTable.Columns.Add("TypeCode");
+            accountTable.Columns.Add("Jb", typeof(int));
+            accountTable.Columns.Add("IsMx", typeof(int));
+            accountTable.Columns.Add("Ncye",typeof(decimal));
+            accountTable.Columns.Add("Qqccgz", typeof(decimal));
+            accountTable.Columns.Add("Jfje", typeof(decimal));
+            accountTable.Columns.Add("Dfje", typeof(decimal));
+            accountTable.Columns.Add("Ncsl", typeof(int));
+            accountTable.Columns.Add("Syjz", typeof(int));
+
+            string qsql = "SELECT km.kmdm,km.kmmc,KM_TYPE,KM_YEFX,Xmhs,Kmjb,IsMx,Ncye,Jfje1,Dfje1,Ncsl  FROM KM   left join kmye  on km.kmdm = kmye.kmdm  ";
+            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
+            foreach (var vd in ds)
+            {
+               DataRow dr = accountTable.NewRow();
+               dr["ProjectID"] = dbName;
+                dr["AccountCode"] = vd.kmdm;
+                dr["UpperCode"] ="";
+                dr["AccountName"] = vd.kmmc;
+                dr["Attribute"] = vd.KM_TYPE == "损益" ? 1 : 0;
+                dr["Jd"] = vd.KM_YEFX;
+                dr["Hsxms"] = vd.Xmhs;
+                dr["TypeCode"] = "";
+                dr["Jb"] = vd.Kmjb;
+                dr["IsMx"] = vd.IsMx==null?0:1;
+                dr["Ncye"] = vd.Ncye == null ? 0M : vd.Ncye;
+                dr["Qqccgz"] = 0M;
+                dr["Jfje"] = vd.Jfje1 == null ? 0M : vd.Jfje1;
+                dr["Dfje"] = vd.Dfje1 == null ? 0M : vd.Dfje1;
+                dr["Ncsl"] = vd.Ncsl == null ? 0M : vd.Ncsl;
+                dr["Syjz"] = 0; 
+                accountTable.Rows.Add(dr);
+
+               
+            }
+            BuildUpperCode(accountTable);
+            string execSQL = " truncate table ACCOUNT ";
+            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+            SqlServerHelper.SqlBulkCopy(accountTable, conStr);
+            MessageBox.Show("科目表初始化完成！");
+        }
+
+        private void BuildUpperCode(DataTable accountTable)
+        {
+            foreach (DataRow dr in accountTable.Rows)
+            {
+                int jb = -1;
+                int.TryParse(dr["Jb"].ToString(),out jb);
+                if (jb<=1) continue;
+                var row = accountTable.Rows.Cast<DataRow>().Where(x => x["Jb"].ToString() == (jb-1).ToString()
+                && dr["AccountCode"].ToString().StartsWith(x["AccountCode"].ToString())).SingleOrDefault();
+                dr["UpperCode"] = row["AccountCode"];
+
+            }
+        }
+
+        private void InitProject(string conStr)
+        { 
+            string projectsql = " truncate table PROJECT  ; INSERT  PROJECT   SELECT Distinct '" + dbName + "', LEFT(XMDM, CHARINDEX('.', XMDM)),XMDM,isnull(XMMC,space(0)),NULL,XMJB,XMMX     FROM XM " +
+                " ; update PROJECT set ProjectCode=LTRIM(rtrim(ProjectCode)),TypeCode=LTRIM(rtrim(TypeCode))  ";
+            SqlMapperUtil.CMDExcute(projectsql, null, conStr);
+             
+            string projecttypesql = " truncate table ProjectType  ; INSERT  ProjectType  SELECT   '" + dbName + "', FITEMID,FName FROM t_itemclass" +
+                " ; update  PROJECTTYPE set TypeCode=LTRIM(rtrim(TypeCode))   ";
+            SqlMapperUtil.CMDExcute(projecttypesql, null, conStr);
+
+            MessageBox.Show("项目初始化完成！");
         }
     }
 }

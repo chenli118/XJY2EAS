@@ -7,8 +7,7 @@ SELECT distinct _km.KMDM,_km.KMMC,_km.kmmx,_km.kmjb,0,isnull(_kmye.ncye,0),isnul
 FROM KM _km   
 left join kmye _kmye  
 on _km.kmdm COLLATE Chinese_PRC_CS_AS_KS_WS=_kmye.kmdm COLLATE Chinese_PRC_CS_AS_KS_WS  
-WHERE ISNUMERIC(LEFT(_km.KMDM,1))=1
-   
+WHERE ISNUMERIC(LEFT(LTRIM(RTRIM(_km.KMDM)),1))=1    
 
 --begin 处理voucher表数据   
 insert EAS_Voucher ([date],Pzh,djh,accountcode,zy,jfje,dfje,jfsl,dfsl,zdr,FDetailID,DFKM)  
@@ -50,7 +49,7 @@ declare  @ix_ppzh_index varchar(100)='ix_ppzh_'+replace(cast(newid() as varchar(
   
 --end  
 declare @year varchar(4)  
-select top 1 @year=kjdate from kjqj where ProjectID=@ProjectID  
+select top 1 @year=kjdate from kjqj  
   
 if @year is null  
  return;  
@@ -68,8 +67,8 @@ if @year is null
    
  update  EAS_Voucher set Period=month([date])  
 
- alter table  drop column IncNo;  
- alter table  add column IncNo int;  
+ alter table EAS_Voucher  drop column IncNo;  
+ alter table EAS_Voucher  add  IncNo int;   
    
 
 IF OBJECT_ID('tempdb..#vouchergroup') IS NOT  NULL  
@@ -82,7 +81,8 @@ IF OBJECT_ID('tempdb..#vouchergroup') IS NOT  NULL
   
  create index ix_pp_t on #vouchergroup (period,pzh)  
    
- create index @ix_ppzh_index on EAS_Voucher(period,pzh)  
+   set @dSql=' create index '+@ix_ppzh_index+' on EAS_Voucher(period,pzh)  '
+   exec(@dSql)
   
  update  v set v.IncNo=vg.RowNumber  
  from  EAS_Voucher  v

@@ -28,9 +28,16 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.button1 = new System.Windows.Forms.Button();
             this.button2 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
+            this.radialMenuItem1 = new C1.Win.C1Command.RadialMenuItem();
+            this.c1MainMenu1 = new C1.Win.C1Command.C1MainMenu();
+            this.c1CommandHolder1 = new C1.Win.C1Command.C1CommandHolder();
+            this.c1CommandLink2 = new C1.Win.C1Command.C1CommandLink();
+            this.c1Command1 = new C1.Win.C1Command.C1Command();
+            ((System.ComponentModel.ISupportInitialize)(this.c1CommandHolder1)).BeginInit();
             this.SuspendLayout();
             // 
             // button1
@@ -63,6 +70,40 @@
             this.button3.UseVisualStyleBackColor = true;
             this.button3.Click += new System.EventHandler(this.Button3_Click);
             // 
+            // radialMenuItem1
+            // 
+            this.radialMenuItem1.Name = "radialMenuItem1";
+            this.radialMenuItem1.Text = "test1";
+            this.radialMenuItem1.ToolTip = "test1";
+            // 
+            // c1MainMenu1
+            // 
+            this.c1MainMenu1.AccessibleName = "Menu Bar";
+            this.c1MainMenu1.CommandHolder = this.c1CommandHolder1;
+            this.c1MainMenu1.CommandLinks.AddRange(new C1.Win.C1Command.C1CommandLink[] {
+            this.c1CommandLink2});
+            this.c1MainMenu1.Dock = System.Windows.Forms.DockStyle.Top;
+            this.c1MainMenu1.Location = new System.Drawing.Point(0, 0);
+            this.c1MainMenu1.Name = "c1MainMenu1";
+            this.c1MainMenu1.Size = new System.Drawing.Size(800, 29);
+            // 
+            // c1CommandHolder1
+            // 
+            this.c1CommandHolder1.Commands.Add(this.c1Command1);
+            this.c1CommandHolder1.Owner = this;
+            // 
+            // c1CommandLink2
+            // 
+            this.c1CommandLink2.Command = this.c1Command1;
+            // 
+            // c1Command1
+            // 
+            this.c1Command1.Image = ((System.Drawing.Image)(resources.GetObject("c1Command1.Image")));
+            this.c1Command1.Name = "c1Command1";
+            this.c1Command1.ShortcutText = "";
+            this.c1Command1.Text = "打开（&O）";
+            this.c1Command1.Click += new C1.Win.C1Command.ClickEventHandler(this.C1Command1_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
@@ -71,8 +112,10 @@
             this.Controls.Add(this.button3);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
+            this.Controls.Add(this.c1MainMenu1);
             this.Name = "Form1";
             this.Text = "新纪元数据入库";
+            ((System.ComponentModel.ISupportInitialize)(this.c1CommandHolder1)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -82,6 +125,11 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Button button3;
+        public C1.Win.C1Command.RadialMenuItem radialMenuItem1;
+        private C1.Win.C1Command.C1MainMenu c1MainMenu1;
+        private C1.Win.C1Command.C1CommandHolder c1CommandHolder1;
+        private C1.Win.C1Command.C1Command c1Command1;
+        private C1.Win.C1Command.C1CommandLink c1CommandLink2;
     }
 }
 

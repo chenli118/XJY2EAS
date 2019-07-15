@@ -328,3 +328,44 @@ create table accountperiod (
    constraint PK_ACCOUNTPERIOD primary key (ProjectID, accountperiod)
 )
 go
+if exists (select 1
+            from  sysobjects
+           where  id = object_id('TBDetail')
+            and   type = 'U')
+   drop table TBDetail
+go
+create table TBDetail (
+   ID                   varchar(50)          not null,
+   ProjectID            varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
+   FSCode               varchar(50)          collate Chinese_PRC_CS_AS_KS_WS not null,
+   AccountCode          varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
+   AuxiliaryCode        varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
+   AccAuxName           varchar(100)         collate Chinese_PRC_CI_AS not null,
+   DataType             int                  not null,
+   TBGrouping           varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
+   TBType               int                  not null,
+   IsAccMx              int                  not null,
+   IsMx                 int                  not null,
+   IsAux                Int                  not null,
+   kmsx                 varchar(100)         collate Chinese_PRC_CI_AS not null,
+   Yefx                 int                  not null default (1),
+   SourceFSCode         varchar(50)          collate Chinese_PRC_CS_AS_KS_WS not null,
+   Sqqmye               decimal(20,2)        not null default (0),
+   Qqccgz               decimal(20,2)        not null default (0),
+   jfje                 decimal(20,2)        not null default (0),
+   dfje                 decimal(20,2)        not null default (0),
+   CrjeJF               decimal(20,2)        not null default (0),
+   CrjeDF               decimal(20,2)        not null default (0),
+   AjeJF                decimal(20,2)        not null default (0),
+   AjeDF                decimal(20,2)        not null default (0),
+   RjeJF                decimal(20,2)        not null default (0),
+   RjeDF                decimal(20,2)        not null default (0),
+   TaxBase              decimal(20,2)        not null default (0),
+   PY1                  decimal(20,2)        not null default (0),
+   jfje1                decimal(20,2)        not null default (0),
+   dfje1                decimal(20,2)        not null default (0),
+   jfje2                decimal(20,2)        not null default (0),
+   dfje2                decimal(20,2)        not null default (0),
+   constraint PK_TBDETAIL primary key (ID, ProjectID)
+)
+go

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,7 +9,29 @@ using System.Threading.Tasks;
 namespace XJY2EAS
 {
    internal class SqlServerHelper
-    { 
+    {
+        public async static void SqlBulkCopy(System.Data.DataTable dt, string conStr)
+        {
+            using (SqlConnection connection = new SqlConnection(conStr))
+            {
+                using (SqlBulkCopy copy = new SqlBulkCopy(connection))
+                {
+                    copy.DestinationTableName = dt.TableName;
+
+                    foreach (DataColumn column in dt.Columns)
+                    {
+                        copy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(column.ColumnName, column.ColumnName));
+                    }
+
+                    connection.Open();
+                    copy.BulkCopyTimeout = 0;
+                    await copy.WriteToServerAsync(dt);
+                    connection.Close();
+                }
+
+            }
+          
+        }
         public static int ExcuteSql(string sql, string constr)
         {
             using (System.Data.SqlClient.SqlConnection conn = new System.Data.SqlClient.SqlConnection(constr))

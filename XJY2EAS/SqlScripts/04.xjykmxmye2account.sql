@@ -1,5 +1,5 @@
   
-delete EAS_ACCOUNT
+truncate table EAS_ACCOUNT
 
 INSERT EAS_ACCOUNT (ACCOUNTCODE,ACCOUNTNAME,[IsMx],Jb,Hsxms,ncye,ncsl)
 SELECT Distinct _km.KMDM,_km.KMMC,_km.kmmx,_km.kmjb,0,  isnull(_kmye.ncye,0),  isnull(_kmye.ncsl,0)  
@@ -18,7 +18,7 @@ create table #kmx (kmdm VARCHAR(255)  COLLATE Chinese_PRC_CS_AS_KS_WS NOT NULL,t
 ; 
 with s1 as
 (
-SELECT DISTINCT _xmye.KMDM,_xmye.XMDM,icl.FITEMID as typecode FROM    XMYE _xmye   JOIN xm xm  
+ SELECT DISTINCT _xmye.KMDM,_xmye.XMDM,icl.FITEMID as typecode FROM    XMYE _xmye   JOIN xm xm  
  ON _xmye.Xmdm COLLATE Chinese_PRC_CS_AS_KS_WS =xm.Xmdm COLLATE Chinese_PRC_CS_AS_KS_WS   
  INNER JOIN t_itemclass icl   ON LEFT(xm.Xmdm,LEN(icl.FItemId))=icl.FItemId 
 )

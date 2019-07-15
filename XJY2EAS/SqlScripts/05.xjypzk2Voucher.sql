@@ -5,7 +5,7 @@ declare  @ix_ppzh_index varchar(100)='ix_ppzh_'+replace(cast(newid() as varchar(
 
 
 --begin 处理voucher表数据   
-delete EAS_Voucher
+truncate table EAS_Voucher
 
 insert EAS_Voucher ([date],Pzh,djh,accountcode,zy,jfje,dfje,jfsl,dfsl,zdr,FDetailID,DFKM)  
 select pzrq,pzh,fjzs,kmdm,zy,  
@@ -45,7 +45,7 @@ end
   
 --end  
 declare @year varchar(4)  
-select top 1 @year=kjdate from kjqj where ProjectID=@AccountInfo  
+select top 1 @year=kjdate from kjqj  
   
 if @year is null  
  return;  

@@ -1,25 +1,11 @@
 declare 
  @ProjectID varchar(100)  ='_EAS_'
  ,@Clientid varchar(100)  ='_Clientid_'
-   
- SET ROWCOUNT 10000;  
-    WHILE 1 = 1  
-    BEGIN  
- declare @ii int=0;  
     
-  delete dbo.ProjectType where ProjectID=@ProjectID
-  set @ii+=@@ROWCOUNT  
-  delete dbo.Project  where ProjectID=@ProjectID
-  set @ii+=@@ROWCOUNT  
-  delete dbo.Account  where ProjectID=@ProjectID 
-  set @ii+=@@ROWCOUNT  
-  delete from dbo.TBVOUCHER where ProjectID=@ProjectID 
-  set @ii+=@@ROWCOUNT  
-  IF @ii = 0  
-   BREAK;  
- END  
-    SET ROWCOUNT 0;  
-  
+truncate table ProjectType
+truncate table Project   
+truncate table Account   
+truncate table TBVOUCHER
 
 
  insert ProjectType(ProjectID,typecode,typename)  
@@ -27,8 +13,11 @@ declare
   
  insert Project(ProjectID,typecode,projectcode,projectname,uppercode,jb,ismx)  
  select distinct @ProjectID,typecode,projectcode,isnull(projectname,space(0)),uppercode,jb,ismx from EAS_PROJECT
-    IF exists (select * from tempdb.dbo.sysobjects where id = object_id(N'tempdb..#tmp222') and type='U')   
+
+
+ IF exists (select * from tempdb.dbo.sysobjects where id = object_id(N'tempdb..#tmp222') and type='U')   
    drop table #tmp222
+
  select DISTINCT a.accountcode,ac.syjz  
   into #tmp222  
    from EAS_ACCOUNT a   
@@ -80,7 +69,7 @@ declare
   
   
    
- update dbo.tbwlzl  set AgeAnalysis=0,BalanceAnalysis=0 where projectid=@ProjectID  
+ update dbo.tbwlzl  set AgeAnalysis=0,BalanceAnalysis=0  
    
  --¸üÐÂaccount.uppercode  
  exec dbo.UpdateAccountUpperCodeLevel1 @ProjectID  
