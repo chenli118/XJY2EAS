@@ -12,7 +12,7 @@ if(@tableType=0)begin
  with a1 as(  
  select distinct t.incno,a.syjz from dbo.tbvoucher t with(nolock)  
  join dbo.Account a with(nolock)  
- on t.AccountCode=a.AccountCode and t.Projectid=a.Projectid    
+ on t.AccountCode=a.AccountCode  
  )  
  ,a2 as (select incno,max(syjz)maxsyjz,min(syjz)minSyjz from a1 group by incno)  
  select ROW_NUMBER() OVER (ORDER BY NEWID()) AS ID, * into #VandA from a2;  
@@ -31,12 +31,12 @@ else if(@tableType=1)
 begin
    IF OBJECT_ID('tempdb..#QHV') IS NOT  NULL  
  DROP TABLE #QHV
- update dbo.qhjzpz set fllx=1 where ProjectID=@ProjectID;  
+ update dbo.qhjzpz set fllx=1  
  ;  
  with a1 as(  
  select distinct t.incno,a.syjz from dbo.qhjzpz t with(nolock)  
  join dbo.Account a with(nolock)  
- on t.AccountCode=a.AccountCode and t.Projectid=a.Projectid   
+ on t.AccountCode=a.AccountCode 
  )  
  ,a2 as (select incno,max(syjz)maxsyjz,min(syjz)minSyjz from a1 group by incno)  
  select ROW_NUMBER() OVER (ORDER BY NEWID()) AS ID, * into #QHV from a2;  

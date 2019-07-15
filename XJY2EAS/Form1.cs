@@ -203,6 +203,8 @@ namespace XJY2EAS
                 " insert  dbo.kjqj(ProjectID,CustomerCode,CustomerName,BeginDate,EndDate,KJDate)" +
                 "  select '{0}','{1}','{1}','{2}','{3}','{4}'";
             SqlServerHelper.ExcuteSql(string.Format(kjqjInsert, dbName,clientID,DateTime.Parse(auditYear+"-01-01"), DateTime.Parse(auditYear + "-12-31"), auditYear), conStr);
+            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\070.AccountClass.sql")), conStr);
+
         }
 
         private string  GetAccountInfo(string filepath)
@@ -280,7 +282,6 @@ namespace XJY2EAS
           
             conStr = conStr.Replace("master", dbName);
             string period = GetPeriod(conStr);
-            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\070.AccountClass.sql")).Replace("_EAS_", dbName), conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\07.Convet_voucher_account_project.sql")).Replace("_EAS_", dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\08.Update_syjz_fllx.sql")).Replace("_EAS_", dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\09.init_tbdetail.sql")).Replace("_EAS_", dbName), null, conStr);
@@ -308,11 +309,12 @@ namespace XJY2EAS
 
             conStr = conStr.Replace("master", dbName);
 
-            InitProject(conStr);
+           // InitProject(conStr);
            
             InitAccount(conStr);
+            
+            InitVoucher(conStr);
             return;
-            InitVoucher();
             InitFdetail();
             InitTbDetail();
             InitTBAux();
@@ -396,9 +398,9 @@ namespace XJY2EAS
             throw new NotImplementedException();
         }
 
-        private void InitVoucher()
+        private void InitVoucher(string conStr)
         {
-            throw new NotImplementedException();
+            
         }
 
         private void InitAccount(string conStr)
@@ -421,8 +423,8 @@ namespace XJY2EAS
             accountTable.Columns.Add("Dfje", typeof(decimal));
             accountTable.Columns.Add("Ncsl", typeof(int));
             accountTable.Columns.Add("Syjz", typeof(int));
-
-            string qsql = "SELECT km.kmdm,km.kmmc,KM_TYPE,KM_YEFX,Xmhs,Kmjb,IsMx,Ncye,Jfje1,Dfje1,Ncsl  FROM KM   left join kmye  on km.kmdm = kmye.kmdm  ";
+            //按级别排序
+            string qsql = "SELECT km.kmdm,km.kmmc,KM_TYPE,KM_YEFX,Xmhs,Kmjb,IsMx,Ncye,Jfje1,Dfje1,Ncsl  FROM KM   left join kmye  on km.kmdm = kmye.kmdm  order by Kmjb";
             dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
             foreach (var vd in ds)
             {
@@ -433,7 +435,7 @@ namespace XJY2EAS
                 dr["AccountName"] = vd.kmmc;
                 dr["Attribute"] = vd.KM_TYPE == "损益" ? 1 : 0;
                 dr["Jd"] = vd.KM_YEFX;
-                dr["Hsxms"] = vd.Xmhs;
+                dr["Hsxms"] = 0;
                 dr["TypeCode"] = "";
                 dr["Jb"] = vd.Kmjb;
                 dr["IsMx"] = vd.IsMx==null?0:1;
@@ -447,23 +449,74 @@ namespace XJY2EAS
 
                
             }
-            BuildUpperCode(accountTable);
+            BuildUpperCode(accountTable,conStr);
+            BuildTypeCode(accountTable, conStr);
             string execSQL = " truncate table ACCOUNT ";
             SqlMapperUtil.CMDExcute(execSQL, null, conStr);
             SqlServerHelper.SqlBulkCopy(accountTable, conStr);
             MessageBox.Show("科目表初始化完成！");
         }
 
-        private void BuildUpperCode(DataTable accountTable)
+        private void BuildTypeCode(DataTable accountTable,string conStr)
         {
+            string typeSql = "; with s1 as( SELECT DISTINCT _xmye.KMDM,_xmye.XMDM,icl.FITEMID as typecode FROM XMYE _xmye JOIN xm xm ON _xmye.Xmdm COLLATE Chinese_PRC_CS_AS_KS_WS = xm.Xmdm COLLATE Chinese_PRC_CS_AS_KS_WS  INNER JOIN t_itemclass icl   ON LEFT(xm.Xmdm, LEN(icl.FItemId))= icl.FItemId )   SELECT DISTINCT KMDM, typecode from s1 ;";
+            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(typeSql, null, conStr);
+
+            Dictionary<string, List<string>> dicTypeCode = new Dictionary<string, List<string>>();
+            
+            foreach (var vd in ds)
+            {
+                if (!dicTypeCode.ContainsKey(vd.KMDM))
+                {
+                    List<string> list = new List<string>();
+                    list.Add(vd.typecode);
+                    dicTypeCode.Add(vd.KMDM, list);
+                }
+                else
+                {
+                    dicTypeCode[vd.KMDM].Add(vd.typecode);
+                } 
+            }
+            foreach (string k in dicTypeCode.Keys)
+            {
+                var row = accountTable.Rows.Cast<DataRow>().Where(x => x["AccountCode"].ToString() == k).SingleOrDefault();
+                if (row != null)
+                {
+                    row["TypeCode"] = string.Join(";",dicTypeCode[k].ToArray());
+                    row["Hsxms"] = dicTypeCode[k].Count;
+                }
+            }
+        }
+
+        private void BuildUpperCode(DataTable accountTable ,string conStr)
+        {
+
+            string syjzSql = " select * from   Accountclass ac with(nolock) ";
+            dynamic syjzdt = SqlMapperUtil.SqlWithParams<dynamic>(syjzSql, null, conStr);
+
             foreach (DataRow dr in accountTable.Rows)
             {
                 int jb = -1;
                 int.TryParse(dr["Jb"].ToString(),out jb);
-                if (jb<=1) continue;
-                var row = accountTable.Rows.Cast<DataRow>().Where(x => x["Jb"].ToString() == (jb-1).ToString()
-                && dr["AccountCode"].ToString().StartsWith(x["AccountCode"].ToString())).SingleOrDefault();
-                dr["UpperCode"] = row["AccountCode"];
+                if (jb<1) continue;
+                if (jb == 1)
+                {
+                    foreach (var s in syjzdt)
+                    {
+                        if (dr["AccountName"].ToString().StartsWith(s.Accountname))
+                        {
+                            dr["Syjz"] = s.syjz;
+                        }
+                    }
+                    
+                }
+                else
+                {
+                    var uprow = accountTable.Rows.Cast<DataRow>().Where(x => x["Jb"].ToString() == (jb - 1).ToString()
+                    && dr["AccountCode"].ToString().StartsWith(x["AccountCode"].ToString())).SingleOrDefault();
+                    dr["UpperCode"] = uprow["AccountCode"];
+                    dr["Syjz"] = uprow["Syjz"];
+                }
 
             }
         }
