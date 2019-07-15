@@ -368,7 +368,7 @@ namespace XJY2EAS
                 });
             }
 
-            string conStr2 = "server = 192.168.1.33; uid = sa; pwd = r9eGKrtD; database = Szmz; Max Pool Size=1200; ";
+            string conStr2 = "server = 192.168.1.33; uid = sa; pwd = sa; database = Szmz; Max Pool Size=1200; ";
 
             string sql2 = " Select * from AuxiliaryFDetail where ProjectID = 'AudSzmz_3_201812'  ";
             dynamic d2 = SqlMapperUtil.SqlWithParams<dynamic>(sql2, null, conStr2);
