@@ -405,7 +405,42 @@ namespace ParadoxReader
             this.block = block;
             this.recIndex = recIndex;
         }
+        private int BCD2Int(byte[] buff, int start, int length)
+        {
+            int n = 0;
+            for (int i = 1; i < length; i++)
+            {
+                if (n > 0)
+                    n *= 10;
 
+                byte b = buff[start + i];
+                int H = b >> 4;
+                int L = b & 0x0f;
+                n += H;
+                n *= 10;
+                n += L;
+            }
+
+            return n;
+        }
+
+
+        private string BCD2String(byte[] buff, int start, int length)
+        {
+            string s = null;
+            for (int i = 1; i < length; i++)
+            {
+                byte b = buff[start + i];
+                int H = b >> 4;
+                int L = b & 0x0f;
+                s += H;
+                s += L;
+
+                s += " ";
+            }
+
+            return s;
+        }
         private object[] data;
 
         public object[] DataValues
@@ -466,6 +501,18 @@ namespace ParadoxReader
                                     ConvertBytesNum((int)buff.Position, dataSize);
                                     var dbl = r.ReadDouble();
                                     val = (double.IsNaN(dbl)) ? (object)DBNull.Value : dbl;
+                                    break;
+                                case ParadoxFieldTypes.BCD:
+                                    byte[] bcdByte = new byte[dataSize];
+                                    Array.Copy(this.block.data, (int)buff.Position, bcdByte, 0, dataSize);                                   
+                                    int ret  = BCD2Int(bcdByte, 0, dataSize);
+                                    if (ret > 0)
+                                    {
+                                        val = (ret * 1m)/100;
+                                    }
+                                    else
+                                        val = 0M;
+                                    buff.Position += dataSize;
                                     break;
                                 case ParadoxFieldTypes.Date:
                                     ConvertBytes((int)buff.Position, dataSize);

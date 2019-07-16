@@ -143,7 +143,7 @@ namespace XJY2EAS
                         case ParadoxReader.ParadoxFieldTypes.Currency:
                         case ParadoxReader.ParadoxFieldTypes.Logical:
                         case ParadoxReader.ParadoxFieldTypes.Short:
-                            strSpt.AppendLine(fieldName + " " + "float null DEFAULT 0,");
+                            strSpt.AppendLine(fieldName + " " + "decimal(19,3) null DEFAULT 0,");
                             dc.DataType = typeof(System.Decimal);
                             break;
                         default:
@@ -400,8 +400,98 @@ namespace XJY2EAS
 
         private void InitVoucher(string conStr)
         {
-            
+            DataTable dtVoucher = new DataTable();
+            dtVoucher.TableName = "TBVoucher";
+            #region columns
+            dtVoucher.Columns.Add("VoucherID");
+            dtVoucher.Columns.Add("Clientid");
+            dtVoucher.Columns.Add("ProjectID");
+            dtVoucher.Columns.Add("IncNo");
+            dtVoucher.Columns.Add("Date", typeof(DateTime));
+            dtVoucher.Columns.Add("Period", typeof(int));
+            dtVoucher.Columns.Add("Pzlx");
+            dtVoucher.Columns.Add("Pzh");
+            dtVoucher.Columns.Add("Djh");
+            dtVoucher.Columns.Add("AccountCode");
+            dtVoucher.Columns.Add("ProjectCode");
+            dtVoucher.Columns.Add("Zy");
+            dtVoucher.Columns.Add("Jfje", typeof(decimal));
+            dtVoucher.Columns.Add("Dfje", typeof(decimal));
+            dtVoucher.Columns.Add("Jfsl", typeof(decimal));
+            dtVoucher.Columns.Add("Dfsl", typeof(decimal));
+            dtVoucher.Columns.Add("ZDR");
+            dtVoucher.Columns.Add("dfkm");
+            dtVoucher.Columns.Add("Jd", typeof(int));
+            dtVoucher.Columns.Add("Fsje", typeof(decimal));
+            dtVoucher.Columns.Add("Wbdm");
+            dtVoucher.Columns.Add("Wbje", typeof(decimal));
+            dtVoucher.Columns.Add("Hl", typeof(decimal));
+            dtVoucher.Columns.Add("FLLX", typeof(int));
+            dtVoucher.Columns.Add("SampleSelectedYesNo", typeof(int));
+            dtVoucher.Columns.Add("SampleSelectedType", typeof(int));
+            dtVoucher.Columns.Add("TBGrouping");
+            dtVoucher.Columns.Add("EASREF");
+            dtVoucher.Columns.Add("AccountingAge", typeof(int));
+            dtVoucher.Columns.Add("qmyegc", typeof(int));
+            dtVoucher.Columns.Add("Stepofsample", typeof(int));
+            dtVoucher.Columns.Add("ErrorYesNo", typeof(int));
+            dtVoucher.Columns.Add("FDetailID", typeof(int));
+            #endregion
+
+            string jzpzSQL = "select Pz_Date,Kjqj,pzrq,Pzh,Djh,IncNo,fjzs,Kmdm,zy, Jd,Wbdm,Wbje,Hl,case when jd = '借' then rmb else 0 end as jfje,  " +
+                "case when jd = '贷' then rmb else 0 end as dfje,  " +
+                "case when jd = '借' then sl  else 0 end as jfsl,  " +
+                "case when jd = '贷' then sl  else 0 end as dfsl,  sr,  FDetailID,DFKM from jzpz ";
+            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(jzpzSQL, null, conStr);
+            foreach (var vd in ds)
+            {
+                DataRow dr = dtVoucher.NewRow();
+                dr["VoucherID"] = Guid.NewGuid();
+                dr["Clientid"] = clientID;
+                dr["ProjectID"] = dbName;
+                dr["IncNo"] = vd.IncNo;
+                dr["Date"] = vd.Pz_Date;
+                dr["Period"] = vd.Kjqj;
+                dr["Pzlx"] = "";
+                dr["Pzh"] = vd.Pzh;
+                dr["Djh"] = vd.Djh == null ? 0 : vd.Djh;
+                dr["AccountCode"] = vd.Kmdm;
+                dr["ProjectCode"] = "";
+                dr["Zy"] = vd.zy;
+                dr["Jfje"] = vd.jfje == null ? 0M : vd.jfje;
+                dr["Dfje"] = vd.dfje == null ? 0M : vd.dfje;
+                dr["Jfsl"] = vd.jfsl == null ? 0M : vd.jfsl;
+                dr["Dfsl"] = vd.dfsl == null ? 0M : vd.dfsl;
+                dr["ZDR"] = vd.sr;
+                dr["dfkm"] = vd.DFKM;
+                dr["Jd"] = vd.Jd == "借" ? 1 : -1;
+                dr["Fsje"] = Convert.ToInt32(dr["Jd"]) * (Convert.ToDecimal(dr["Jfje"]) + Convert.ToDecimal(dr["Dfje"]));
+                dr["Wbdm"] = vd.Wbdm == null ? 0M : vd.Wbdm;
+                dr["Wbje"] = vd.Wbje == null ? 0M : vd.Wbje;
+                dr["Hl"] = vd.Hl;
+                dr["FLLX"] = vd.jfsl == null ? 0M : vd.jfsl;
+                dr["FDetailID"] = vd.FDetailID == null ? -1 : vd.FDetailID;
+                dr["SampleSelectedYesNo"] = 0M;
+                dr["SampleSelectedType"] = 0M;
+                dr["TBGrouping"] = "";
+                dr["EASREF"] = "";
+                dr["AccountingAge"] = 0M;
+                dr["qmyegc"] = 0M;
+                dr["Stepofsample"] = 0M;
+                dr["ErrorYesNo"] = 0M;
+                dtVoucher.Rows.Add(dr);
+
+            }
+             
+
+            string execSQL = " truncate table TBVoucher ";
+            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+            SqlServerHelper.SqlBulkCopy(dtVoucher, conStr);
+            string updatesql = " update v set v.fllx = case when a.Syjz = 0 then 1 else a.Syjz end   from dbo.tbvoucher v     join ACCOUNT a on a.AccountCode = v.AccountCode  ";
+            SqlMapperUtil.CMDExcute(updatesql, null, conStr);
+            MessageBox.Show("凭证表初始化完成！");
         }
+ 
 
         private void InitAccount(string conStr)
         {

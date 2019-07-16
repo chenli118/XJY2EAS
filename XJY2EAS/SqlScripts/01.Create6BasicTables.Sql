@@ -200,7 +200,7 @@ create table dbo.TBVoucher (
    Period               int                  not null,
    Pzlx                 varchar(255)         collate Chinese_PRC_CI_AS null,
    Pzh                  varchar(255)         collate Chinese_PRC_CI_AS not null,
-   Djh                  int                  not null,
+   Djh                  varchar(255)         null,
    AccountCode          varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
    ProjectCode          varchar(100)         collate Chinese_PRC_CS_AS_KS_WS null,
    Zy                   varchar(Max)         collate Chinese_PRC_CI_AS null,

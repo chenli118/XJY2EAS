@@ -52,6 +52,8 @@ namespace ParadoxReader
                     return typeof(double);
                 case ParadoxFieldTypes.Number:
                     return typeof(double);
+                case ParadoxFieldTypes.BCD:
+                    return typeof(decimal);
                 case ParadoxFieldTypes.Date:
                     return typeof(DateTime);
                 case ParadoxFieldTypes.Timestamp:
