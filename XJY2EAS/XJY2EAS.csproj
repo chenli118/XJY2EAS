@@ -460,8 +460,8 @@
     <Content Include="SqlScripts\07.Convet_voucher_account_project.sql" />
     <Content Include="SqlScripts\08.Update_syjz_fllx.sql" />
     <Content Include="SqlScripts\09.init_tbdetail.sql" />
-    <Content Include="SqlScripts\10.UpdateProject4tbvoucher.sql" />
-    <Content Include="SqlScripts\11.InitTBAux.sql" />
+    <Content Include="SqlScripts\16.UpdateProject4tbvoucher.sql" />
+    <Content Include="SqlScripts\14.InitTBAux.sql" />
     <Content Include="SqlScripts\12.Updatedfjfje_tbdetail_tbaux.sql" />
     <Content Include="SqlScripts\13.UpdateTbQqccgz.sql" />
     <Content Include="SqlScripts\CreateProjectDatabaseStore.sql" />

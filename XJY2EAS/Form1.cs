@@ -306,74 +306,22 @@ namespace XJY2EAS
         private void C1Command1_Click(object sender, C1.Win.C1Command.ClickEventArgs e)
         {
             dbName = GetDBNmame();
-
             conStr = conStr.Replace("master", dbName);
 
-           // InitProject(conStr);
-           
-            InitAccount(conStr);
-            
+            InitProject(conStr);           
+            InitAccount(conStr);            
             InitVoucher(conStr);
+            InitFdetail(conStr);
+            InitTBAux(conStr);
+            InitTbDetail(conStr);
+
+          
+            
+
             return;
-            InitFdetail();
-            InitTbDetail();
-            InitTBAux();
+           
             InitTBFS();
 
-
-
-
-            return;
-
-
-            DataTable auxfdetail = new DataTable();
-            auxfdetail.Columns.Add("Accountcode");
-            auxfdetail.Columns.Add("AuxiliaryCode");
-            auxfdetail.Columns.Add("FdetailID");
-
-
-            string itemclass = "select * from t_itemclass";
-            var  tab_ic = SqlMapperUtil.SqlWithParams<dynamic>(itemclass, null, conStr);
-
-            List<string> xmField = new List<string>();
-            foreach (var iid in tab_ic)
-            {
-                xmField.Add("F" + iid.FItemClassID);
-            }
-
-            string sql1  = "select  * from t_itemdetail  t join t_fzye f on t.FDetailID = f.FDetailID  ";
-            var d1 = SqlMapperUtil.SqlWithParams<dynamic>(sql1, null, conStr);
-
-
-
-
-            foreach (var d in d1)
-            {
-                Array.ForEach(xmField.ToArray(),f=>{
-
-                    foreach (var xv in d)
-                    {
-                        if (xv.Key == f)
-                        {
-                            if (!string.IsNullOrWhiteSpace(xv.Value))
-                            {
-                               DataRow dr1 =  auxfdetail.NewRow();
-                                dr1["Accountcode"] = d.Kmdm;
-                                dr1["AuxiliaryCode"] = xv.Value;
-                                dr1["FdetailID"] = d.FDetailID;
-
-                                auxfdetail.Rows.Add(dr1);
-                            }
-                        }
-                    }
-
-                });
-            }
-
-            string conStr2 = "server = 192.168.1.33; uid = sa; pwd = sa; database = Szmz; Max Pool Size=1200; ";
-
-            string sql2 = " Select * from AuxiliaryFDetail where ProjectID = 'AudSzmz_3_201812'  ";
-            dynamic d2 = SqlMapperUtil.SqlWithParams<dynamic>(sql2, null, conStr2);
 
 
         }
@@ -383,19 +331,199 @@ namespace XJY2EAS
             throw new NotImplementedException();
         }
 
-        private void InitTBAux()
+        private void InitTBAux(string conStr)
         {
-            throw new NotImplementedException();
+            DataTable auxTable = new DataTable();
+            auxTable.TableName = "TBAux";
+            auxTable.Columns.Add("ProjectID");
+            auxTable.Columns.Add("AccountCode");
+            auxTable.Columns.Add("AuxiliaryCode");
+            auxTable.Columns.Add("AuxiliaryName");
+            auxTable.Columns.Add("FSCode");
+            auxTable.Columns.Add("kmsx");
+            auxTable.Columns.Add("YEFX", typeof(int));
+            auxTable.Columns.Add("TBGrouping");
+            auxTable.Columns.Add("Sqqmye", typeof(decimal));
+            auxTable.Columns.Add("Qqccgz", typeof(decimal));
+            auxTable.Columns.Add("jfje", typeof(decimal));
+            auxTable.Columns.Add("dfje", typeof(decimal));
+            auxTable.Columns.Add("qmye", typeof(decimal));
+            string qsql = "select distinct idet.accountcode,idet.AuxiliaryCode, isnull(xm.xmmc,space(0)) as AuxiliaryName,xmye.ncye as Sqqmye  from AuxiliaryFDetail idet join  xm xm   on LTRIM(rtrim(xm.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS=idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS      join xmye xmye on idet.accountcode COLLATE Chinese_PRC_CS_AS_KS_WS = ltrim(rtrim(xmye.kmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS and idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS = LTRIM(rtrim(xmye.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS  ";
+            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
+            foreach (var vd in ds)
+            {
+                DataRow dr = auxTable.NewRow();
+                dr["ProjectID"] = dbName;
+                dr["AccountCode"] = vd.accountcode;
+                dr["AuxiliaryCode"] = vd.AuxiliaryCode;
+                dr["AuxiliaryName"] = vd.AuxiliaryName;
+                dr["FSCode"] = string.Empty;
+                dr["kmsx"] = 0;
+                dr["YEFX"] = 0;
+                dr["TBGrouping"] = vd.accountcode;
+                dr["Sqqmye"] = vd.Sqqmye==null?0M:vd.Sqqmye;
+                dr["Qqccgz"] = 0M;
+                dr["jfje"] = 0M;
+                dr["dfje"] = 0M;
+                dr["qmye"] = 0M;
+                auxTable.Rows.Add(dr);
+            }
+            string execSQL = " truncate table  " + auxTable.TableName;
+            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+            SqlServerHelper.SqlBulkCopy(auxTable, conStr);
+
+            MessageBox.Show("TBAux初始化完成！");
+
+
         }
 
-        private void InitTbDetail()
+        /// <summary>
+        /// [InitTbAccTable] [ByContinueDateUpdateTBAcc]
+        /// </summary>
+        /// <param name="conStr"></param>
+        private void InitTbDetail(string conStr)
         {
-            throw new NotImplementedException();
+            DataTable dtDetail = new DataTable();
+            dtDetail.TableName = "TBDetail";
+            #region columns
+            dtDetail.Columns.Add("ID");
+            dtDetail.Columns.Add("ProjectID");
+            dtDetail.Columns.Add("FSCode");
+            dtDetail.Columns.Add("AccountCode");
+            dtDetail.Columns.Add("AuxiliaryCode");
+            dtDetail.Columns.Add("AccAuxName");
+            dtDetail.Columns.Add("DataType", typeof(int));
+            dtDetail.Columns.Add("TBGrouping");
+            dtDetail.Columns.Add("TBType", typeof(int));
+            dtDetail.Columns.Add("IsAccMx", typeof(int));
+            dtDetail.Columns.Add("IsMx", typeof(int));
+            dtDetail.Columns.Add("IsAux", typeof(int));
+            dtDetail.Columns.Add("kmsx");
+            dtDetail.Columns.Add("Yefx", typeof(int));
+            dtDetail.Columns.Add("SourceFSCode");
+            dtDetail.Columns.Add("Sqqmye", typeof(decimal));
+            dtDetail.Columns.Add("Qqccgz", typeof(decimal));
+            dtDetail.Columns.Add("jfje", typeof(decimal));
+            dtDetail.Columns.Add("dfje", typeof(decimal));
+            dtDetail.Columns.Add("CrjeJF", typeof(decimal));
+            dtDetail.Columns.Add("CrjeDF", typeof(decimal));
+            dtDetail.Columns.Add("AjeJF", typeof(decimal));
+            dtDetail.Columns.Add("AjeDF", typeof(decimal));
+            dtDetail.Columns.Add("RjeJF", typeof(decimal));
+            dtDetail.Columns.Add("RjeDF", typeof(decimal));
+            dtDetail.Columns.Add("TaxBase", typeof(decimal));
+            dtDetail.Columns.Add("PY1", typeof(decimal));
+            dtDetail.Columns.Add("jfje1", typeof(decimal));
+            dtDetail.Columns.Add("dfje1", typeof(decimal));
+            dtDetail.Columns.Add("jfje2", typeof(decimal));
+            dtDetail.Columns.Add("dfje2", typeof(decimal));
+            #endregion
+            string qsql = "select distinct NEWID() ID ,a.AccountCode,space(0) AS SourceFSCode," +
+                " a.AccountName as AccAuxName,a.jb as TBType,0 AS IsMx, a.UpperCode TBGrouping, a.Ncye AS Sqqmye,space(0) fscode,1 yefx,0 kmsx," +
+                "0 AS isAux,a.ismx AS isAccMx,0 AS DataType,Qqccgz,Hsxms,TypeCode from dbo.Account a with(nolock)   ";
+
+            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
+            foreach (var vd in ds)
+            {
+                DataRow dr = dtDetail.NewRow();
+                dr["ID"] = vd.ID;
+                dr["ProjectID"]=dbName;
+                dr["FSCode"] = vd.fscode;
+                dr["AccountCode"] = vd.AccountCode;
+                dr["AuxiliaryCode"] = vd.TypeCode;
+                dr["AccAuxName"] = vd.AccAuxName;
+                dr["DataType"] = vd.DataType;
+                dr["TBGrouping"] = vd.TBGrouping;
+                dr["TBType"] = vd.TBType;
+                dr["IsAccMx"] = vd.isAccMx;
+                dr["IsMx"] = vd.IsMx;
+                dr["IsAux"] = vd.Hsxms!=0?1:0;
+                dr["kmsx"] = vd.kmsx;
+                dr["Yefx"] = vd.yefx;
+                dr["SourceFSCode"] = vd.SourceFSCode;
+                dr["Sqqmye"] = vd.Sqqmye==null?0M:vd.Sqqmye;
+                dr["Qqccgz"] = vd.Qqccgz;
+                dr["jfje"] = 0M;
+                dr["dfje"] = 0M;
+                dr["CrjeJF"] = 0M;
+                dr["CrjeDF"] = 0M;
+                dr["AjeJF"] = 0M;
+                dr["AjeDF"] = 0M;
+                dr["RjeJF"] = 0M;
+                dr["RjeDF"] = 0M;
+                dr["TaxBase"] = 0M;
+                dr["PY1"] = 0M;
+                dr["jfje1"] = 0M;
+                dr["dfje1"] = 0M;
+                dr["jfje2"] = 0M;
+                dr["dfje2"] = 0M;
+                dtDetail.Rows.Add(dr);
+
+            }
+            string execSQL = " truncate table  " + dtDetail.TableName;
+            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+            SqlServerHelper.SqlBulkCopy(dtDetail, conStr);
+
+            MessageBox.Show("TBDetail初始化完成！");
         }
 
-        private void InitFdetail()
+        private void InitFdetail(string conStr)
         {
-            throw new NotImplementedException();
+            DataTable auxfdetail = new DataTable();
+            auxfdetail.TableName = "AuxiliaryFDetail";
+            auxfdetail.Columns.Add("projectid");
+            auxfdetail.Columns.Add("Accountcode");
+            auxfdetail.Columns.Add("AuxiliaryCode");
+            auxfdetail.Columns.Add("Ncye", typeof(decimal));
+            auxfdetail.Columns.Add("Jfje1", typeof(decimal));
+            auxfdetail.Columns.Add("Dfje1", typeof(decimal));
+            auxfdetail.Columns.Add("FDetailID", typeof(int));
+            auxfdetail.Columns.Add("DataType", typeof(int));
+            auxfdetail.Columns.Add("DataYear", typeof(int)); 
+
+            string itemclass = "select * from t_itemclass";
+            var tab_ic = SqlMapperUtil.SqlWithParams<dynamic>(itemclass, null, conStr);
+            List<string> xmField = new List<string>();
+            foreach (var iid in tab_ic)
+            {
+                xmField.Add("F" + iid.FItemClassID);
+            }
+            string sql1 = "select  * from t_itemdetail  t join t_fzye f on t.FDetailID = f.FDetailID  ";
+            var d1 = SqlMapperUtil.SqlWithParams<dynamic>(sql1, null, conStr);
+            foreach (var d in d1)
+            {
+                Array.ForEach(xmField.ToArray(), f => {
+
+                    foreach (var xv in d)
+                    {
+                        if (xv.Key == f)
+                        {
+                            if (!string.IsNullOrWhiteSpace(xv.Value))
+                            {
+                                DataRow dr1 = auxfdetail.NewRow();
+                                dr1["projectid"] = dbName;
+                                dr1["Accountcode"] = d.Kmdm;
+                                dr1["AuxiliaryCode"] = xv.Value;                              
+                                dr1["Ncye"] = d.Ncye;
+                                dr1["Jfje1"] = d.Jfje1;
+                                dr1["Dfje1"] = d.Dfje1;
+                                dr1["FDetailID"] = d.FDetailID;
+                                dr1["DataType"] =0;
+                                dr1["DataYear"] = int.Parse(auditYear);
+                                auxfdetail.Rows.Add(dr1);
+                            }
+                        }
+                    }
+
+                });
+            }
+            string execSQL = " truncate table  "+ auxfdetail.TableName;
+            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+            SqlServerHelper.SqlBulkCopy(auxfdetail, conStr);
+            //string conStr2 = "server = 192.168.1.33; uid = sa; pwd = sa; database = Szmz; Max Pool Size=1200; ";
+            //string sql2 = " Select * from AuxiliaryFDetail where ProjectID = 'AudSzmz_3_201812'  ";
+            //dynamic d2 = SqlMapperUtil.SqlWithParams<dynamic>(sql2, null, conStr2);
+            MessageBox.Show("辅助核算对照表初始化完成！");
         }
 
         private void InitVoucher(string conStr)
