@@ -174,223 +174,126 @@ BEGIN	--create table logtable
 INSERT INTO LogTable values(@pid,GETDATE(),ERROR_NUMBER(),ERROR_SEVERITY(),ERROR_STATE(),@ERROR_PROCEDURE,ERROR_LINE(),ERROR_MESSAGE())
 
 END
-
-
 GO
-IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'UpdateAccountUpperCodeLevel1')
+IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'UpdateTBDetailTBAuxJE')
    BEGIN
-       DROP  Procedure  UpdateAccountUpperCodeLevel1
+       DROP  Procedure  UpdateTBDetailTBAuxJE
 	END
 GO
-/********************************************************************************
-  Database  : EAS
-  Copyright : 2010 Huapu (Beijing)
-  Customer  : 
-  Project   : EAS -更新Account中的UppderCode，jb,ISmx字段值  STEP TWO
-  Created   : 2011/05/24 by dengll,rshibin
-  Version   : 1.0.8
-********************************************************************************/
-CREATE Procedure UpdateAccountUpperCodeLevel1
-	@ProjectID nvarchar(50)
-AS
+  
+Create proc UpdateTBDetailTBAuxJE(@pzEndDate date)
+ as
+ begin 
+;with  t0 as (select projectid,accountcode from account with(nolock)  where accountname='以前年度损益调整'	UNION ALL select  a.projectid,a.accountcode from account a with(nolock) inner join t0 on a.uppercode=t0.accountcode    and a.accountcode!=a.accountcode)
+,t1 as(select accountcode,syjz from dbo.Account where Syjz=0)
+,t2 as(select v.accountcode,v.FDetailID ,v.fllx,v.jfje,v.dfje,t1.syjz from dbo.tbvoucher v  with(nolock)   join  t1 on t1.accountcode  = v.AccountCode  where v.date<@pzEndDate)
+,t3 as(select distinct vo.AccountCode,sum(vo.jfje)jfje,sum(vo.dfje)dfje   from t2 vo where vo.fllx=1 and vo.syjz=1 AND	ACCOUNTCODE NOT in (select accountcode from t0) group by vo.AccountCode  
+        union all  select distinct vo.AccountCode,sum(vo.jfje)jfje,sum(vo.dfje)dfje  from t2  vo   where  (fllx=1 or fllx=2) 			and (syjz!=1 or ACCOUNTCODE in(select accountcode from t0))			group by AccountCode )
+update acc set acc.jfje=tv.jfje,acc.dfje=tv.dfje from dbo.TBDetail	acc with(nolock) join t3	tv on acc.accountcode=tv.AccountCode	and acc.isaux=0	and	acc.auxiliarycode=''	and acc.datatype=0
 
-BEGIN TRY
---BEGIN	TransAction
+
+IF object_id('tempdb..#auxje')  IS NOT NULL DROP TABLE #auxje
+
+;with  t10 as (select projectid,accountcode from account with(nolock)  where accountname='以前年度损益调整'	UNION ALL select  a.projectid,a.accountcode from account a with(nolock) inner join t10 on a.uppercode=t10.accountcode    and a.accountcode!=a.accountcode)
+,t11 as(select accountcode,syjz from dbo.Account where Syjz=0)
+,t12 as(select v.accountcode,v.FDetailID ,v.fllx,v.jfje,v.dfje,t11.syjz from dbo.tbvoucher v  with(nolock)   join  t11 on t11.accountcode  = v.AccountCode  where v.date<@pzEndDate)
+,t13 as( select	distinct	vo.AccountCode,vo.FDetailID,sum(vo.jfje)jfje,sum(vo.dfje)dfje 	from t12	vo where vo.fllx=1 and vo.syjz=1 		AND	ACCOUNTCODE NOT in (select accountcode from t10)	group by vo.AccountCode,vo.FDetailID
+	union all select	distinct	vo.AccountCode,vo.FDetailID,sum(vo.jfje)jfje,sum(vo.dfje)dfje 	from t12	vo 	WHERE (vo.FLLX=1 OR vo.FLLX=2) 			and (syjz!=1 or ACCOUNTCODE in(select accountcode from t10))	group by vo.AccountCode,vo.FDetailID )
+,t14 as ( select af.accountcode,af.AuxiliaryCode,sum(v.jfje)jfje,sum(v.dfje)dfje     from dbo.AuxiliaryFDetail af with(nolock)    inner join t13 v    on V.AccountCode=AF.accountcode AND AF.FDetailID=V.FDetailID AND AF.DATATYPE=0     group by af.accountcode,af.AuxiliaryCode  )  
+select ROW_NUMBER() OVER (ORDER BY accountcode) AS ID, accountcode,AuxiliaryCode,jfje,dfje into #auxje from t14 
+
+update  aux set aux.jfje=0,aux.dfje=0  from	dbo.TbAux aux  inner join #auxje AV on av.AccountCode COLLATE Chinese_PRC_CS_AS_KS_WS=aux.AccountCode  COLLATE Chinese_PRC_CS_AS_KS_WS  
+
+update  aux set aux.jfje=isnull(av.jfje,0),aux.dfje=isnull(av.dfje,0)  from	dbo.TbAux aux  inner join #auxje AV on av.AccountCode COLLATE Chinese_PRC_CS_AS_KS_WS=aux.AccountCode  COLLATE Chinese_PRC_CS_AS_KS_WS 
+	and av.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS=aux.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS 
+
+update ac1 set ac1.jfje1=ac2.jfje,ac1.dfje1=ac2.dfje From dbo.TBDetail ac1	with(nolock)  Inner join TBDetail ac2  with(nolock)  	on ac1.accountcode=ac2.accountcode	 and ac2.isaux=0 Where   ac1.isaux=0
+
+Update dbo.TBDetail set jfje2=jfje-jfje1,dfje2=dfje-dfje1  where   isaux=0
+ 
+select ROW_NUMBER() OVER (ORDER BY accountcode) AS ID,accountcode,fscode,kmsx,yefx          into #unauxje          from dbo.TbDetail with(nolock)       where auxiliarycode='' and datatype=0 and isaux=0    
+ 
+
+IF object_id('tempdb..#auxfscode')  IS NOT NULL DROP TABLE #auxfscode
+select ROW_NUMBER() OVER (ORDER BY accountcode) AS ID,accountcode,fscode,kmsx,yefx 
+into #auxfscode	from	dbo.TbDetail with(nolock) where	auxiliarycode='' and	datatype=0 and	isaux=0	 									
+MERGE DBO.TBAux AS AUX
+USING 	#auxfscode AS DET
+ON AUX.ACCOUNTCODE COLLATE Chinese_PRC_CS_AS_KS_WS=DET.ACCOUNTCODE	COLLATE Chinese_PRC_CS_AS_KS_WS
+WHEN MATCHED  
+THEN UPDATE SET aux.fscode=det.fscode,aux.KMSX=det.kmsx,aux.yefx=det.yefx;
+  --ByTBAuxUpdateTbDetailJFJEDFJE
+update  ad set ad.jfje=isnull(av.jfje,0),ad.dfje=isnull(av.dfje,0) from	dbo.tbdetail ad	with(nolock) 
+    inner join dbo.TbAux av	with(nolock) 
+    on av.AccountCode COLLATE Chinese_PRC_CS_AS_KS_WS=ad.AccountCode  COLLATE Chinese_PRC_CS_AS_KS_WS
+	and av.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS=ad.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS   
+ 
+ end
+GO
+
+IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'InitTbAccTable')
+   BEGIN
+       DROP  Procedure  InitTbAccTable
+	END
+GO
+
+CREATE Procedure [dbo].[InitTbAccTable](	@ProjectID nvarchar(50))
+AS
+begin try	
 SET NOCOUNT ON
 SET XACT_ABORT ON
-
-declare	@km	varchar(1000)=@ProjectID+'km'
-UPDATE ACCOUNT SET UpperCode=NULL WHERE ProjectID=@ProjectID;
-
-declare	@isFParentID	int=0;
-if exists(select * 
-	from syscolumns 
-	where id=object_id(@km) and lower([name])='FParentID')
-	set	@isFParentID=1;
-
---如果存在FParentid字段列可以按新纪元的数据找上下级关系.by dengll 20180120
-IF	(@isFParentID=1)begin
-	declare	@sql	nvarchar(max)
-	set	@sql='
-		
-		----提前获取更新锁,这个更新不启任何更新作用
-		UPDATE DBO.ACCOUNT SET Attribute=1
-		WHERE ProjectID='''+@ProjectID+''' AND 1!=1
-
-		update	a set a.UpperCode=c.kmdm_jd
-		from	dbo.account	a
-		left	join	'+@km+'	b
-		on a.accountcode	COLLATE Chinese_PRC_CS_AS_KS_WS	=b.kmdm_jd	COLLATE Chinese_PRC_CS_AS_KS_WS
-		left	join	'+@km+'	c
-		on	b.FParentID	COLLATE Chinese_PRC_CS_AS_KS_WS=c.FAccountID	COLLATE Chinese_PRC_CS_AS_KS_WS
-		where	a.projectid='''+@ProjectID+'''
-	'
-
-	exec(@sql)
-end 
-else begin
---如果新纪元没有FParentID需要自己分析数据上下级关系
-set nocount on
-
-DECLARE @minLen INT
-SELECT @minLen=MIN(LEN(accountCode)) FROM dbo.ACCOUNT with(nolock) WHERE ProjectID=@projectid
-;
-DECLARE @a1 TABLE(ID int IDENTITY(1,1),accountcode VARCHAR(100) COLLATE Chinese_PRC_CS_AS_KS_WS,uppercode VARCHAR(100) COLLATE Chinese_PRC_CS_AS_KS_WS,jb INT)
-	;
-INSERT @a1
-SELECT accountcode,null,1
-			FROM dbo.ACCOUNT with(nolock) WHERE ProjectID=@projectid AND LEN(accountcode)=@minLen
-
-DECLARE @a2 TABLE(accountcode VARCHAR(100)COLLATE Chinese_PRC_CS_AS_KS_WS,lens int)
-
-INSERT @a2
-SELECT DISTINCT accountcode,len(accountcode)lens FROM dbo.Account with(nolock) WHERE ProjectID=@projectid	GROUP BY accountcode
-DECLARE @jb INT=0
-WHILE (1=1)BEGIN
-	;
-	WITH a3 AS (
-		SELECT * from	@a2	WHERE accountcode NOT IN (SELECT accountcode FROM @a1))
-	,a2 AS (SELECT * FROM a3	WHERE lens <= (SELECT MIN(lens)lens FROM a3))
-
-	INSERT @a1		
-	SELECT  a.AccountCode,aa.accountcode AS uppercode,aa.jb+1 AS jb 
-	FROM  a2 a
-	INNER JOIN @a1 aa
-	ON  a.AccountCode LIKE aa.accountcode+'%'
-	WHERE   aa.jb=@jb+1  
-	IF @@ROWCOUNT=0
-		BREAK;
-	SET @jb=@jb+1	
-END
-
---update account
+truncate table tbdetail
+declare @tempTable1 table 
+(
+	id int identity(1,1),
+    AccountCode  varchar(255) collate Chinese_PRC_CS_AS_KS_WS,
+    AccountName varchar(255),
+    Fs  varchar(255),
+    FsCode varchar(255) collate Chinese_PRC_CS_AS_KS_WS,
+    Yefx int,
+	Kmsx int
+)insert into @tempTable1
+select distinct C.Accountcode,C.AccountName,G.FsName,G.FsCode,G.Yefx,G.kmsx from dbo.TBFS G with(nolock)
+inner join dbo.account C with(nolock) on (C.AccountName = G.FsName) --此处不能使用like语法及实际业务冲突
+where (C.Jb=1) and G.ismx=1 
+insert into @tempTable1
+select distinct C.AccountCode,C.AccountName,F.Fs,G.FsCode,G.Yefx,G.Kmsx
+From dbo.account C with(nolock),	EASKmdzb F with(nolock) ,	dbo.TBFS G with(nolock)
+where   	  (C.AccountName = F.Note)--此处不能使用like语法及实际业务冲突
+ and (F.Fs=G.FsName) and (C.jb=1) and G.ismx=1
+ and C.AccountName not in (select AccountName from @tempTable1) --以避免与第一段insert into @tempTable1插入数据重复
+ select distinct NEWID() IID ,DB_NAME() AS projectid,a.AccountCode,space(0) AS AuxiliaryCode,space(0) AS SourceFSCode,
+ a.AccountName as AccAuxName,a.jb as TBType,0 AS IsMx,isnull(a.UpperCode,isnull(b.fscode,space(0))) TBGrouping,a.Ncye AS Sqqmye,
+isnull(b.FsCode,space(0))fscode,isnull(b.yefx,1)yefx,isnull(b.kmsx,0)kmsx,0 AS isAux,a.ismx AS isAccMx,0 AS DataType
+into #p1  from dbo.Account	a with(nolock)
+left	join	@tempTable1	b
+on left(a.accountcode,len(b.accountcode)) collate Chinese_PRC_CS_AS_KS_WS=b.AccountCode collate Chinese_PRC_CS_AS_KS_WS  
+alter table #p1 add ID int IDENTITY(1,1)
 declare @leve int=1000
 declare @ix int=1
 declare @ixend int=@leve 
-
 while (1=1)begin
-	update a set a.uppercode=b.uppercode
-		from	dbo.Account  a
-		inner join (select * from 	@a1 where id BETWEEN @ix	and @ixend)b
-		on a.AccountCode collate Chinese_PRC_CS_AS_KS_WS=b.accountcode collate Chinese_PRC_CS_AS_KS_WS
-		where a.projectid=@ProjectID
-	
+		insert into dbo.TBDetail (ID,projectid,AccountCode,AuxiliaryCode,SourceFSCode,AccAuxName,TBType,IsMx,TBGrouping,Sqqmye,
+		fscode,yefx,kmsx,isAux,isAccMx,DataType)
+		select IID,projectid,AccountCode,AuxiliaryCode,SourceFSCode,AccAuxName,TBType,IsMx,TBGrouping,Sqqmye,
+			fscode,yefx,kmsx,isAux,isAccMx,DataType
+				from #p1
+					where id BETWEEN @ix	and @ixend
 	if @@ROWCOUNT=0
 		break;
 	set @ix+=@leve 
 	set	@ixend+=@leve 
 end
 
+END TRY
 
----补充处理uppercode为Null的accountcode, 主要是由于accountcode长短不统一导致
-DECLARE @a3 TABLE (accountcode VARCHAR (100) COLLATE Chinese_PRC_CS_AS_KS_WS, 
-	uppercode VARCHAR (100) COLLATE Chinese_PRC_CS_AS_KS_WS, 
-	jb INT)
+BEGIN CATCH
+	EXEC DBO.[PRO_THROW]  'th','InitTbAccTable'
+END CATCH
 
-INSERT @a3
-SELECT accountcode,NULL,jb FROM dbo.ACCOUNT with(nolock) WHERE ProjectID=@projectid and Jb>1 AND UpperCode IS NULL
 
-IF EXISTS(SELECT 1 FROM @A3)BEGIN
 
-	DECLARE @a4 TABLE (accountcode VARCHAR (100)  COLLATE Chinese_PRC_CS_AS_KS_WS, 
-		uppercode VARCHAR (100)  COLLATE Chinese_PRC_CS_AS_KS_WS, 
-		jb INT)
-	
-	CREATE TABLE #account (ID int IDENTITY(1,1),accountcode VARCHAR(100) COLLATE Chinese_PRC_CS_AS_KS_WS,
-		uppercode VARCHAR(100) COLLATE Chinese_PRC_CS_AS_KS_WS,jb INT)
-	
-	INSERT @a4
-	SELECT accountcode,uppercode,jb FROM dbo.ACCOUNT WHERE len(accountcode)<(SELECT min(len(accountcode)) FROM @a3)
-
-	;WITH a1 AS(
-		SELECT accountcode,uppercode,jb FROM @a4
-		UNION ALL
-		SELECT a.accountcode,b.accountcode AS uppercode,a.jb FROM	@a3 a 
-		inner JOIN  dbo.ACCOUNT 	b	with(nolock)
-		ON a.accountcode!=b.accountcode AND
-			 a.accountcode LIKE b.accountcode+'%'
-		where a.jb=b.jb+1	and b.projectid=@ProjectID
-	)
-
-	insert #account
-	select accountcode,uppercode,jb from a1	--where  AccountCode LIKE '6602%';
-
-	set @leve =1000
-	set @ix =1
-	set @ixend =@leve 
-
-	while (1=1)begin
-		update a set a.uppercode=b.uppercode
-			from	dbo.Account  a
-			inner join (select * from 	#account where id BETWEEN @ix	and @ixend)b
-			on a.AccountCode collate Chinese_PRC_CS_AS_KS_WS=b.accountcode collate Chinese_PRC_CS_AS_KS_WS
-			where a.projectid=@ProjectID
-	
-		if @@ROWCOUNT=0
-			break;
-		set @ix+=@leve 
-		set	@ixend+=@leve 
-	end
-	drop table #account
-end	
-
-end
-
---Commit TransAction
-end try
-begin catch
-	EXEC DBO.[PRO_THROW] @ProjectID,'UpdateAccountUpperCodeLevel1'
-end catch
 
 
 GO
-IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = 'UpdateAccountPeriod')
-   BEGIN
-       DROP  Procedure  UpdateAccountPeriod
-	END
-GO
 
-CREATE  PROCEDURE [dbo].UpdateAccountPeriod  
- @ProjectID varchar(100),  
- @dateType int  
-AS  
-BEGIN TRY   
---BEGIN TransAction  
-SET NOCOUNT ON  
-SET XACT_ABORT ON  
-  
-declare @PeriodTable table(Period int,StartDate datetime,EndDate datetime)  
-declare @i int=1;  
-declare @kjdate varchar(10);  
-select top 1 @kjdate=kjdate from dbo.kjqj --where ProjectID=@ProjectID  
-while(@i<=12)begin  
- declare @date varchar(10)  
- if(@i>9)  
-  set @date=@kjdate+cast(@i as varchar(2))+'01'  
- else   
-  set @date=@kjdate+'0'+cast(@i as varchar(2))+'01'  
-  
- INSERT @PeriodTable  
- select cast(CONVERT(char(6),@date,112) as int),   
- convert(varchar(10),DATEADD(mm, DATEDIFF(mm,0,@date), 0),111),  
- CONVERT(varchar(10),DATEADD(ms,-3,DATEADD(mm, DATEDIFF(m,0,@date)+1, 0)),111)  
- set @i=@i+1  
-end  
-  
-if(@dateType!=0)  
-delete dbo.accountperiod where ProjectID=@ProjectID   
-  and DateType=@dateType and year(StartDate)=year(@kjdate)  
-else   
- delete dbo.accountperiod where ProjectID=@ProjectID and DateType=@dateType  
-  
-insert into dbo.accountperiod(ProjectID,accountperiod,Period,StartDate,EndDate,DateType,currentyearPID)  
-select @ProjectID,B.Period,0, B.StartDate, B.EndDate,@dateType ,@ProjectID  
-from  @PeriodTable B where not exists  
-(select  A.accountperiod from  dbo.accountperiod A where  B.period = A.accountperiod )  
---Commit TransAction  
-end try  
-begin catch  
---ROLLBACK TransAction  
- EXEC DBO.[PRO_THROW] @ProjectID,'UpdateAccountPeriod'  
-end catch  
-  

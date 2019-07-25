@@ -9,7 +9,7 @@ IF OBJECT_ID('tempdb..#tmp') IS NOT NULL
 create table #tmp(fname varchar(max))        
         
 DECLARE @FNAME VARCHAR(max)=''        
-		DECLARE @fid varchar(1000)        
+DECLARE @fid varchar(1000)        
  SELECT @fid= stuff ((SELECT ';'+CAST([FItemId] AS VARCHAR)        
    FROM  t_itemclass      
     FOR xml path ('')), 1, 1,'')        

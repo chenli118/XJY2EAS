@@ -204,6 +204,7 @@ namespace XJY2EAS
                 "  select '{0}','{1}','{1}','{2}','{3}','{4}'";
             SqlServerHelper.ExcuteSql(string.Format(kjqjInsert, dbName,clientID,DateTime.Parse(auditYear+"-01-01"), DateTime.Parse(auditYear + "-12-31"), auditYear), conStr);
             SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\070.AccountClass.sql")), conStr);
+            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\PackConfigTable.sql")), conStr);
 
         }
 
@@ -311,24 +312,32 @@ namespace XJY2EAS
             InitProject(conStr);           
             InitAccount(conStr);            
             InitVoucher(conStr);
-            InitFdetail(conStr);
-            InitTBAux(conStr);
+            InitTBFS(conStr);
             InitTbDetail(conStr);
-
-          
-            
-
-            return;
+            InitFdetail(conStr);
+            InitTBAux(conStr);           
+            UpdateTBDetailAndTBAux(conStr);
            
-            InitTBFS();
+           
+            
 
 
 
         }
 
-        private void InitTBFS()
+        private void UpdateTBDetailAndTBAux(string conStr)
         {
-            throw new NotImplementedException();
+            string pzdate= GetPeriod(conStr);
+            var p = new DynamicParameters();
+            p.Add("@pzEndDate", pzdate);   
+            SqlMapperUtil.InsertUpdateOrDeleteStoredProc("UpdateTBDetailTBAuxJE", p, conStr);
+            MessageBox.Show("UpdateTBDetailTBAuxJE 完成！");
+        }
+
+        private void InitTBFS(string conStr)
+        {
+            string execSQL = "Insert TBFS  SELECT * FROM Pack_TBFS  where projectid='audCas'";
+            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
         }
 
         private void InitTBAux(string conStr)
@@ -383,6 +392,8 @@ namespace XJY2EAS
         /// <param name="conStr"></param>
         private void InitTbDetail(string conStr)
         {
+            #region old
+            /*
             DataTable dtDetail = new DataTable();
             dtDetail.TableName = "TBDetail";
             #region columns
@@ -437,7 +448,7 @@ namespace XJY2EAS
                 dr["TBType"] = vd.TBType;
                 dr["IsAccMx"] = vd.isAccMx;
                 dr["IsMx"] = vd.IsMx;
-                dr["IsAux"] = vd.Hsxms!=0?1:0;
+                dr["IsAux"] = 0;
                 dr["kmsx"] = vd.kmsx;
                 dr["Yefx"] = vd.yefx;
                 dr["SourceFSCode"] = vd.SourceFSCode;
@@ -462,8 +473,11 @@ namespace XJY2EAS
             }
             string execSQL = " truncate table  " + dtDetail.TableName;
             SqlMapperUtil.CMDExcute(execSQL, null, conStr);
-            SqlServerHelper.SqlBulkCopy(dtDetail, conStr);
-
+            SqlServerHelper.SqlBulkCopy(dtDetail, conStr); */
+            #endregion 
+            var p = new DynamicParameters();
+            p.Add("@ProjectID", dbName);
+            SqlMapperUtil.InsertUpdateOrDeleteStoredProc("InitTbAccTable", p, conStr);
             MessageBox.Show("TBDetail初始化完成！");
         }
 
@@ -597,7 +611,7 @@ namespace XJY2EAS
                 dr["Wbdm"] = vd.Wbdm == null ? 0M : vd.Wbdm;
                 dr["Wbje"] = vd.Wbje == null ? 0M : vd.Wbje;
                 dr["Hl"] = vd.Hl;
-                dr["FLLX"] = vd.jfsl == null ? 0M : vd.jfsl;
+                dr["FLLX"] = 1;
                 dr["FDetailID"] = vd.FDetailID == null ? -1 : vd.FDetailID;
                 dr["SampleSelectedYesNo"] = 0M;
                 dr["SampleSelectedType"] = 0M;
