@@ -21,8 +21,7 @@ namespace XJY2EAS
         private string auditYear = "";
         private string projectid = "";
         private string accoutNumber = "";
-        private string clientID = "";
-        private int importType = 0;
+        private string clientID = "";       
         private string dbName = "";
         string conStr = ConfigurationManager.AppSettings["ConString"];
         private List<string> Importfiles = new List<string>();
@@ -43,44 +42,57 @@ namespace XJY2EAS
            // c1RadialMenu1.ShowMenu(this,point,false);
 
         }
-
-
-        private string[] Un001File(string filepath)
+        string thirdDataFiles = string.Empty;
+        //选择文件
+        private void Button6_Click(object sender, EventArgs e)
         {
-            try
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
-                string unZipFilePath = filepath.Replace(".001", "");
-                if (!Directory.Exists(unZipFilePath)) Directory.CreateDirectory(unZipFilePath);
-                using (var stream = new FileStream(filepath, FileMode.Open,
-                             FileAccess.Read, FileShare.ReadWrite))
+                openFileDialog.Filter = "新纪元采集文件|*.001";
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    UnZip001File.Un001File(stream, unZipFilePath);
+                    try
+                    {
+                        string doubleZeroFile = openFileDialog.FileName;
+                        File.SetAttributes(doubleZeroFile, FileAttributes.Normal);
+                        thirdDataFiles = doubleZeroFile.Replace(".001", "");
+                        if (Directory.Exists(thirdDataFiles)) Directory.Move(thirdDataFiles, thirdDataFiles + new System.Random(100));
+                        Directory.CreateDirectory(thirdDataFiles);
+                        var files = Un001File(doubleZeroFile, thirdDataFiles);
+                    }
+                    catch (Exception ex)
+                    {
+                        thirdDataFiles = string.Empty;
+                        MessageBox.Show(ex.Message);
 
-                    //获取所有文件添加到
-                    var files = Directory.GetFiles(unZipFilePath, "*.*",
-                        SearchOption.AllDirectories).Where(s => s != null && (s.EndsWith(".db")
-                            || s.EndsWith(".ini"))).ToArray();
+                    }
 
-                    return files;
                 }
-
             }
-            catch (Exception ex)
-            { throw new Exception("解压001文件错误:" + ex.Message, ex); }
         }
-
-
-
-        private void Button1_Click(object sender, EventArgs e)
+        /// <summary>
+        /// 一键导入
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Button4_Click(object sender, EventArgs e)
         {
-            var sourceFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.001");
-            if (sourceFiles.Length == 0) { MessageBox.Show("未找到001文件!"); }
-            string filepath = sourceFiles[0];
-            File.SetAttributes(filepath, FileAttributes.Normal);
-
-            //001 to pd
-            var files = Un001File(filepath);
-          
+            DBInit(thirdDataFiles);
+            dbName = GetDBNmame();
+            conStr = conStr.Replace("master", dbName);
+            InitProject(conStr);
+            InitAccount(conStr);
+            InitVoucher(conStr);
+            InitTBFS(conStr);
+            InitTbDetail(conStr);
+            InitFdetail(conStr);
+            InitTBAux(conStr);
+            UpdateTBDetailAndTBAux(conStr);
+        }
+        private void DBInit(string thirdDataFiles)
+        {
+            if (thirdDataFiles.Length == 0) { MessageBox.Show("请选择采集后的数据文件!"); return; }
+            string[] files = System.IO.Directory.GetFiles(thirdDataFiles);
             //过滤需要导入的db文件
             #region 001ToDb
             var dbFiles = files.Where(p => Importfiles.Exists(s =>
@@ -98,10 +110,8 @@ namespace XJY2EAS
 
             Array.ForEach(dbFiles.ToArray(), (string dbfile) =>
             {
-                if (importType == 0)
-                {
-                    PD2SqlDB(dbfile, dbName);
-                }
+                PD2SqlDB(dbfile, dbName);
+
                 //else if (importType != 0 &&
                 //         tables.Count(x => dbfile.ToLower().IndexOf(x) > -1) > 0)
                 //{
@@ -111,8 +121,33 @@ namespace XJY2EAS
 
             #endregion
 
-            MessageBox.Show("新纪元数据库创建完成！");
+            MessageBox.Show("数据库创建完成！");
         }
+        private string[] Un001File(string filepath,string targetDirectory)
+        {
+            try
+            {
+              
+                using (var stream = new FileStream(filepath, FileMode.Open,
+                             FileAccess.Read, FileShare.ReadWrite))
+                {
+                    UnZip001File.Un001File(stream, targetDirectory);
+
+                    //获取所有文件添加到
+                    var files = Directory.GetFiles(targetDirectory, "*.*",
+                        SearchOption.AllDirectories).Where(s => s != null && (s.EndsWith(".db")
+                            || s.EndsWith(".ini"))).ToArray();
+
+                    return files;
+                }
+
+            }
+            catch (Exception ex)
+            { throw new Exception("解压001文件错误:" + ex.Message, ex); }
+        }
+        
+       
+
         private async void PD2SqlDB(string filepath,String dbName)
         {
 
@@ -207,6 +242,27 @@ namespace XJY2EAS
             SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\PackConfigTable.sql")), conStr);
 
         }
+        private string GetDBNmame()
+        {
+            if (dbName.Length == 0)
+            {
+                DirectoryInfo di = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                var accountinfofile = di.Parent.GetFiles("*.ini", SearchOption.AllDirectories)[0];
+                dbName = GetAccountInfo(accountinfofile.FullName);
+                if (dbName.Length == 0)
+                {
+                    MessageBox.Show("没找到项目信息文件");
+                    return string.Empty;
+                }
+            }
+            return dbName;
+        }
+        private string GetPeriod(string conStr)
+        {
+            string qStr = "select  MAX(pz_date) from jzpz";
+            DateTime p = SqlMapperUtil.SqlWithParamsSingle<DateTime>(qStr, null, conStr);
+            return p.ToShortDateString();
+        }
 
         private string  GetAccountInfo(string filepath)
         {
@@ -242,31 +298,20 @@ namespace XJY2EAS
           
             }
         }
-
+        private void Button1_Click(object sender, EventArgs e)
+        {
+            DBInit(thirdDataFiles);
+        }
         private void Button2_Click(object sender, EventArgs e)
         {
             CreateMidTables();
             MessageBox.Show("转换中间表创建成功!");
         }
-        private string GetDBNmame()
-        {
-            if (dbName.Length == 0)
-            {
-                DirectoryInfo di = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-                var accountinfofile = di.Parent.GetFiles("*.ini", SearchOption.AllDirectories)[0];
-                dbName = GetAccountInfo(accountinfofile.FullName);
-                if (dbName.Length == 0)
-                {
-                    MessageBox.Show("没找到项目信息文件");
-                    return string .Empty;
-                }
-            }
-            return dbName;
-        }
+      
         private void CreateMidTables()
         {
             GetDBNmame();
-             conStr = conStr.Replace("master", dbName);
+            conStr = conStr.Replace("master", dbName);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\02.xjyxm2easproject.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\03.t_itemclass2projecttype.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\04.xjykmxmye2account.Sql")), null, conStr);
@@ -297,31 +342,10 @@ namespace XJY2EAS
             MessageBox.Show("导入成功！");
         }
 
-        private string GetPeriod(string conStr)
-        {
-            string qStr = "select  MAX(pz_date) from jzpz";
-            DateTime p = SqlMapperUtil.SqlWithParamsSingle<DateTime>(qStr,null, conStr);
-            return  p.ToShortDateString();
-        }
-
+      
         private void C1Command1_Click(object sender, C1.Win.C1Command.ClickEventArgs e)
         {
-            dbName = GetDBNmame();
-            conStr = conStr.Replace("master", dbName);
-
-            InitProject(conStr);           
-            InitAccount(conStr);            
-            InitVoucher(conStr);
-            InitTBFS(conStr);
-            InitTbDetail(conStr);
-            InitFdetail(conStr);
-            InitTBAux(conStr);           
-            UpdateTBDetailAndTBAux(conStr);
-           
-           
-            
-
-
+          
 
         }
 
@@ -765,5 +789,9 @@ namespace XJY2EAS
 
             MessageBox.Show("项目初始化完成！");
         }
+        
+       
+ 
+       
     }
 }
