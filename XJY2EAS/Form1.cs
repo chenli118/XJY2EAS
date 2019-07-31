@@ -29,17 +29,7 @@ namespace XJY2EAS
         {
             InitializeComponent();
             string[] xjytables = { "km", "kmye", "xm", "xmye", "bm", "bmye", "wl", "wlye", "t_fzye", "t_itemclass", "t_itemdetail", "jzpz", "pzk" };
-            Importfiles.AddRange(xjytables);
-            Point point = new Point(100, 300);
-            //var v = c1RadialMenu1.Visible;
-            //var b= c1RadialMenu1.Expanded;
-           // c1RadialMenu1.HideMenu();
-           // c1RadialMenu1.UseAnimation = true;
-            //c1RadialMenu1.InitializeLifetimeService();
-            //this.Controls.Add();
-            //var a = c1RadialMenu1.Container;
-           // c1RadialMenu1.CenterOnScreen =  this.PointToClient(point);
-           // c1RadialMenu1.ShowMenu(this,point,false);
+            Importfiles.AddRange(xjytables);          
 
         }
         string thirdDataFiles = string.Empty;
@@ -56,15 +46,24 @@ namespace XJY2EAS
                         string doubleZeroFile = openFileDialog.FileName;
                         File.SetAttributes(doubleZeroFile, FileAttributes.Normal);
                         thirdDataFiles = doubleZeroFile.Replace(".001", "");
-                        if (Directory.Exists(thirdDataFiles)) Directory.Move(thirdDataFiles, thirdDataFiles + new System.Random(100));
+                        if (Directory.Exists(thirdDataFiles)) Directory.Move(thirdDataFiles, thirdDataFiles + DateTime.Now.Ticks);
                         Directory.CreateDirectory(thirdDataFiles);
                         var files = Un001File(doubleZeroFile, thirdDataFiles);
+                        GetCustomerInfo();
+                        if (dbName.Length == 0)
+                        {
+                            MessageBox.Show("没找到项目信息文件");
+                            return;
+                        }
+                        txtCustomerCode.Text = dbName;
+                        txtBeginDate.Text = auditYear;
+                        txtEndDate.Text = auditYear;
+
                     }
                     catch (Exception ex)
                     {
                         thirdDataFiles = string.Empty;
                         MessageBox.Show(ex.Message);
-
                     }
 
                 }
@@ -78,7 +77,7 @@ namespace XJY2EAS
         private void Button4_Click(object sender, EventArgs e)
         {
             DBInit(thirdDataFiles);
-            dbName = GetDBNmame();
+            
             conStr = conStr.Replace("master", dbName);
             InitProject(conStr);
             InitAccount(conStr);
@@ -99,15 +98,8 @@ namespace XJY2EAS
                 s == Path.GetFileNameWithoutExtension(p).ToLower()
                 || (Path.GetFileNameWithoutExtension(p).ToLower() != "jzpz" &&
                     Path.GetFileNameWithoutExtension(p).ToLower().IndexOf("jzpz") > -1)));
-            dbName = GetAccountInfo(files.Where(x =>
-                    Path.GetFileName(x).ToLower() == "ztsjbf.ini").FirstOrDefault());
-            if (dbName.Length == 0)
-            {
-                MessageBox.Show("没找到项目信息文件");
-                return;
-            }
+            if (dbFiles.Count() == 0) { MessageBox.Show("没有发现数据文件！");return; }
             InitDataBase(dbName);
-
             Array.ForEach(dbFiles.ToArray(), (string dbfile) =>
             {
                 PD2SqlDB(dbfile, dbName);
@@ -242,21 +234,7 @@ namespace XJY2EAS
             SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\PackConfigTable.sql")), conStr);
 
         }
-        private string GetDBNmame()
-        {
-            if (dbName.Length == 0)
-            {
-                DirectoryInfo di = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-                var accountinfofile = di.Parent.GetFiles("*.ini", SearchOption.AllDirectories)[0];
-                dbName = GetAccountInfo(accountinfofile.FullName);
-                if (dbName.Length == 0)
-                {
-                    MessageBox.Show("没找到项目信息文件");
-                    return string.Empty;
-                }
-            }
-            return dbName;
-        }
+        
         private string GetPeriod(string conStr)
         {
             string qStr = "select  MAX(pz_date) from jzpz";
@@ -264,13 +242,14 @@ namespace XJY2EAS
             return p.ToShortDateString();
         }
 
-        private string  GetAccountInfo(string filepath)
+        private void  GetCustomerInfo()
         {
-            if (!File.Exists(filepath))
-                MessageBox.Show("ztsjbf.ini 文件不存在!");
-
+            var accountinfofile = Directory.GetFiles(thirdDataFiles).Where(x => x.ToLower().EndsWith("ztsjbf.ini")).FirstOrDefault();             
+            if (!File.Exists(accountinfofile)) { MessageBox.Show("ztsjbf.ini 文件不存在!"); return; }
+                
+            CustomerInfo customerInfo = new CustomerInfo();
             using (System.IO.StreamReader sr =
-                   new System.IO.StreamReader(filepath, UnicodeEncoding.GetEncoding("GBK")))
+                   new System.IO.StreamReader(accountinfofile, UnicodeEncoding.GetEncoding("GBK")))
             {
                 var accYear = "";
                 string str = "";
@@ -293,9 +272,7 @@ namespace XJY2EAS
                     || (c > 96 && c < 123))
                     { sb.Append((char)c); }
                 });
-
-                return sb.ToString();
-          
+                dbName = sb.ToString(); 
             }
         }
         private void Button1_Click(object sender, EventArgs e)
@@ -310,7 +287,7 @@ namespace XJY2EAS
       
         private void CreateMidTables()
         {
-            GetDBNmame();
+            
             conStr = conStr.Replace("master", dbName);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\02.xjyxm2easproject.Sql")), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\03.t_itemclass2projecttype.Sql")), null, conStr);
@@ -323,10 +300,7 @@ namespace XJY2EAS
         }
 
         private void Button3_Click(object sender, EventArgs e)
-        {
-            dbName =GetDBNmame();
-          
-            conStr = conStr.Replace("master", dbName);
+        {   conStr = conStr.Replace("master", dbName);
             string period = GetPeriod(conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\07.Convet_voucher_account_project.sql")).Replace("_EAS_", dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\08.Update_syjz_fllx.sql")).Replace("_EAS_", dbName), null, conStr);
@@ -793,5 +767,13 @@ namespace XJY2EAS
        
  
        
+    }
+    public class CustomerInfo
+    {
+        public string ProjectID { get; set; }
+        public string CustomerCode { get; set; }
+        public string CustomerName { get; set; }
+        public DateTime AccountBeginDate { get; set; }
+        public DateTime AccountEndDate { get; set; }
     }
 }

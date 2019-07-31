@@ -40,10 +40,10 @@
             this.button5 = new System.Windows.Forms.Button();
             this.button6 = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
-            this.textBox1 = new System.Windows.Forms.TextBox();
-            this.textBox2 = new System.Windows.Forms.TextBox();
+            this.txtCustomerCode = new System.Windows.Forms.TextBox();
+            this.txtBeginDate = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
-            this.textBox3 = new System.Windows.Forms.TextBox();
+            this.txtEndDate = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.c1CommandHolder1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -130,7 +130,7 @@
             this.button6.Name = "button6";
             this.button6.Size = new System.Drawing.Size(196, 80);
             this.button6.TabIndex = 7;
-            this.button6.Text = "选择采集文件";
+            this.button6.Text = "选择采集的文件";
             this.button6.UseVisualStyleBackColor = true;
             this.button6.Click += new System.EventHandler(this.Button6_Click);
             // 
@@ -143,20 +143,19 @@
             this.label1.TabIndex = 8;
             this.label1.Text = "客户编码：";
             // 
-            // textBox1
+            // txtCustomerCode
             // 
-            this.textBox1.Location = new System.Drawing.Point(365, 35);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(416, 28);
-            this.textBox1.TabIndex = 9;
+            this.txtCustomerCode.Location = new System.Drawing.Point(365, 35);
+            this.txtCustomerCode.Name = "txtCustomerCode";
+            this.txtCustomerCode.Size = new System.Drawing.Size(416, 28);
+            this.txtCustomerCode.TabIndex = 9;
             // 
-            // textBox2
+            // txtBeginDate
             // 
-            this.textBox2.Location = new System.Drawing.Point(362, 87);
-            this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(157, 28);
-            this.textBox2.TabIndex = 11;
-            //this.textBox2.TextChanged += new System.EventHandler(this.TextBox2_TextChanged);
+            this.txtBeginDate.Location = new System.Drawing.Point(362, 87);
+            this.txtBeginDate.Name = "txtBeginDate";
+            this.txtBeginDate.Size = new System.Drawing.Size(157, 28);
+            this.txtBeginDate.TabIndex = 11;
             // 
             // label2
             // 
@@ -167,22 +166,22 @@
             this.label2.TabIndex = 10;
             this.label2.Text = "期间年度：";
             // 
-            // textBox3
+            // txtEndDate
             // 
-            this.textBox3.Location = new System.Drawing.Point(585, 87);
-            this.textBox3.Name = "textBox3";
-            this.textBox3.Size = new System.Drawing.Size(196, 28);
-            this.textBox3.TabIndex = 13;
+            this.txtEndDate.Location = new System.Drawing.Point(585, 87);
+            this.txtEndDate.Name = "txtEndDate";
+            this.txtEndDate.Size = new System.Drawing.Size(196, 28);
+            this.txtEndDate.TabIndex = 13;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.textBox3);
-            this.Controls.Add(this.textBox2);
+            this.Controls.Add(this.txtEndDate);
+            this.Controls.Add(this.txtBeginDate);
             this.Controls.Add(this.label2);
-            this.Controls.Add(this.textBox1);
+            this.Controls.Add(this.txtCustomerCode);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.button6);
             this.Controls.Add(this.button5);
@@ -209,13 +208,13 @@
         private C1.Win.C1Command.C1Command c1Command1;
         private System.Windows.Forms.Button button4;
         private C1.Win.C1Command.RadialMenuItem radialMenuItem1;
-        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.TextBox txtBeginDate;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.TextBox txtCustomerCode;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button button6;
         private System.Windows.Forms.Button button5;
-        private System.Windows.Forms.TextBox textBox3;
+        private System.Windows.Forms.TextBox txtEndDate;
     }
 }
 
