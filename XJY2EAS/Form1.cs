@@ -7,10 +7,12 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -112,7 +114,7 @@ namespace XJY2EAS
             });
 
             #endregion
-
+            GetPeriod(conStr);
             MessageBox.Show("数据库创建完成！");
         }
         private string[] Un001File(string filepath,string targetDirectory)
@@ -235,11 +237,47 @@ namespace XJY2EAS
 
         }
         
-        private string GetPeriod(string conStr)
+        private void GetPeriod(string conStr)
         {
-            string qStr = "select  MAX(pz_date) from jzpz";
-            DateTime p = SqlMapperUtil.SqlWithParamsSingle<DateTime>(qStr, null, conStr);
-            return p.ToShortDateString();
+            Thread.CurrentThread.CurrentCulture = new CultureInfo("zh-CN", true)
+            {
+                DateTimeFormat = { ShortDatePattern = "yyyy-MM-dd", FullDateTimePattern = "yyyy-MM-dd HH:mm:ss", LongTimePattern = "HH:mm:ss" }
+            };
+            string qStr = "select distinct  min(pz_date) bd,  max(pz_date) ed from jzpz";
+            dynamic pzdt = SqlMapperUtil.SqlWithParamsSingle<dynamic>(qStr, null, conStr);
+            foreach (var s in pzdt)
+            {
+                DateTime beginDate = DateTime.MinValue;
+                DateTime endDate = DateTime.MinValue;
+                if (DateTime.TryParse(pzdt.bd.ToString(), out beginDate) && DateTime.TryParse(pzdt.ed.ToString(), out endDate))
+                {
+                    if (beginDate != DateTime.MinValue && endDate != DateTime.MinValue)
+                    {
+                        this.txtBeginDate.Text = beginDate.ToShortDateString();
+                        switch (endDate.Month / 3)
+                        {
+                            case 0:
+                                txtEndDate.Text = endDate.ToShortDateString();
+                                break;
+                            case 1:
+                                txtEndDate.Text = endDate.Year + "-03-31";
+                                break;
+                            case 2:
+                                txtEndDate.Text = endDate.Year + "-06-30";
+                                break;
+                            case 3:
+                                txtEndDate.Text = endDate.Year + "-09-30";
+                                break;
+                            case 4:
+                                txtEndDate.Text = endDate.Year + "-12-31";
+                                break;
+
+                        }
+                    }
+                }
+
+            }
+
         }
 
         private void  GetCustomerInfo()
@@ -300,8 +338,8 @@ namespace XJY2EAS
         }
 
         private void Button3_Click(object sender, EventArgs e)
-        {   conStr = conStr.Replace("master", dbName);
-            string period = GetPeriod(conStr);
+        {
+            conStr = conStr.Replace("master", dbName);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\07.Convet_voucher_account_project.sql")).Replace("_EAS_", dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\08.Update_syjz_fllx.sql")).Replace("_EAS_", dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\09.init_tbdetail.sql")).Replace("_EAS_", dbName), null, conStr);
@@ -309,10 +347,7 @@ namespace XJY2EAS
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\11.InitTBAux.sql")).Replace("_EAS_", dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\12.Updatedfjfje_tbdetail_tbaux.sql")).Replace("_EAS_", dbName), null, conStr);
             SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\13.UpdateTbQqccgz.sql")).Replace("_EAS_", dbName), null, conStr);
-
-            //var p = new DynamicParameters();
-            //p.Add("@ProjectID", dbName);   
-            //SqlMapperUtil.InsertUpdateOrDeleteStoredProc("ByFllxUpdateTbAccAndTbAuxQqccgz", p, conStr);
+             
             MessageBox.Show("导入成功！");
         }
 
@@ -324,10 +359,9 @@ namespace XJY2EAS
         }
 
         private void UpdateTBDetailAndTBAux(string conStr)
-        {
-            string pzdate= GetPeriod(conStr);
+        { 
             var p = new DynamicParameters();
-            p.Add("@pzEndDate", pzdate);   
+            p.Add("@pzEndDate", txtEndDate.Text);   
             SqlMapperUtil.InsertUpdateOrDeleteStoredProc("UpdateTBDetailTBAuxJE", p, conStr);
             MessageBox.Show("UpdateTBDetailTBAuxJE 完成！");
         }
