@@ -103,8 +103,7 @@
             this.c1Command1.Name = "c1Command1";
             this.c1Command1.ShortcutText = "";
             this.c1Command1.Text = "打开（&O）";
-            this.c1Command1.Click += new C1.Win.C1Command.ClickEventHandler(this.C1Command1_Click);
-            // 
+           
             // button4
             // 
             this.button4.Location = new System.Drawing.Point(585, 152);
