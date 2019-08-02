@@ -33,7 +33,6 @@
             this.button2 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
             this.radialMenuItem1 = new C1.Win.C1Command.RadialMenuItem();
-            this.c1MainMenu1 = new C1.Win.C1Command.C1MainMenu();
             this.c1CommandHolder1 = new C1.Win.C1Command.C1CommandHolder();
             this.c1Command1 = new C1.Win.C1Command.C1Command();
             this.button4 = new System.Windows.Forms.Button();
@@ -49,6 +48,7 @@
             // 
             // button1
             // 
+            this.button1.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.button1.Location = new System.Drawing.Point(261, 152);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(258, 64);
@@ -59,21 +59,23 @@
             // 
             // button2
             // 
+            this.button2.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.button2.Location = new System.Drawing.Point(261, 252);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(258, 64);
             this.button2.TabIndex = 1;
-            this.button2.Text = "转换中间表";
+            this.button2.Text = "转换凭证库";
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.Button2_Click);
             // 
             // button3
             // 
+            this.button3.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this.button3.Location = new System.Drawing.Point(261, 353);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(258, 64);
             this.button3.TabIndex = 2;
-            this.button3.Text = "EAS财务数据入库";
+            this.button3.Text = "处理第一个辅助核算项目";
             this.button3.UseVisualStyleBackColor = true;
             this.button3.Click += new System.EventHandler(this.Button3_Click);
             // 
@@ -82,15 +84,6 @@
             this.radialMenuItem1.Name = "radialMenuItem1";
             this.radialMenuItem1.Text = "test1";
             this.radialMenuItem1.ToolTip = "test1";
-            // 
-            // c1MainMenu1
-            // 
-            this.c1MainMenu1.AccessibleName = "Menu Bar";
-            this.c1MainMenu1.CommandHolder = this.c1CommandHolder1;
-            this.c1MainMenu1.Dock = System.Windows.Forms.DockStyle.Top;
-            this.c1MainMenu1.Location = new System.Drawing.Point(0, 0);
-            this.c1MainMenu1.Name = "c1MainMenu1";
-            this.c1MainMenu1.Size = new System.Drawing.Size(800, 29);
             // 
             // c1CommandHolder1
             // 
@@ -103,10 +96,11 @@
             this.c1Command1.Name = "c1Command1";
             this.c1Command1.ShortcutText = "";
             this.c1Command1.Text = "打开（&O）";
-           
+            // 
             // button4
             // 
-            this.button4.Location = new System.Drawing.Point(585, 152);
+            this.button4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.button4.Location = new System.Drawing.Point(12, 152);
             this.button4.Name = "button4";
             this.button4.Size = new System.Drawing.Size(196, 265);
             this.button4.TabIndex = 4;
@@ -116,12 +110,14 @@
             // 
             // button5
             // 
-            this.button5.Location = new System.Drawing.Point(12, 152);
+            this.button5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.button5.Location = new System.Drawing.Point(585, 152);
             this.button5.Name = "button5";
             this.button5.Size = new System.Drawing.Size(196, 265);
             this.button5.TabIndex = 6;
             this.button5.Text = "队列导入EAS";
             this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.Button5_Click);
             // 
             // button6
             // 
@@ -135,6 +131,7 @@
             // 
             // label1
             // 
+            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(261, 38);
             this.label1.Name = "label1";
@@ -144,6 +141,7 @@
             // 
             // txtCustomerCode
             // 
+            this.txtCustomerCode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.txtCustomerCode.Location = new System.Drawing.Point(365, 35);
             this.txtCustomerCode.Name = "txtCustomerCode";
             this.txtCustomerCode.Size = new System.Drawing.Size(416, 28);
@@ -151,6 +149,7 @@
             // 
             // txtBeginDate
             // 
+            this.txtBeginDate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.txtBeginDate.Location = new System.Drawing.Point(362, 87);
             this.txtBeginDate.Name = "txtBeginDate";
             this.txtBeginDate.Size = new System.Drawing.Size(157, 28);
@@ -158,6 +157,7 @@
             // 
             // label2
             // 
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(258, 90);
             this.label2.Name = "label2";
@@ -167,6 +167,7 @@
             // 
             // txtEndDate
             // 
+            this.txtEndDate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.txtEndDate.Location = new System.Drawing.Point(585, 87);
             this.txtEndDate.Name = "txtEndDate";
             this.txtEndDate.Size = new System.Drawing.Size(196, 28);
@@ -188,7 +189,6 @@
             this.Controls.Add(this.button3);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
-            this.Controls.Add(this.c1MainMenu1);
             this.Name = "Form1";
             this.Text = "新纪元数据入库";
             ((System.ComponentModel.ISupportInitialize)(this.c1CommandHolder1)).EndInit();
@@ -202,7 +202,6 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Button button3;
-        private C1.Win.C1Command.C1MainMenu c1MainMenu1;
         private C1.Win.C1Command.C1CommandHolder c1CommandHolder1;
         private C1.Win.C1Command.C1Command c1Command1;
         private System.Windows.Forms.Button button4;

@@ -11,7 +11,7 @@ namespace XJY2EAS
     /// 解压新纪元001文件
     /// 分x86,x64
     /// </summary>
-    public class UnZip001File
+    public class UnZipByCom
     {
         private readonly static object unObject = new object();
 
@@ -53,7 +53,7 @@ namespace XJY2EAS
         /// <param name="un001Filepath">001文件带路径</param>
         /// <param name="unPath">解压到目标目录</param>
         /// <returns>true 成功,false失败</returns>
-        internal static bool Un001File(string un001Filepath, string unPath)
+        internal static bool UnZipFile(string un001Filepath, string unPath)
         {
             var fileinfo = new System.IO.FileInfo(un001Filepath);
             int iRet = -1;
@@ -76,7 +76,7 @@ namespace XJY2EAS
         /// <param name="un001Stream">001文件流</param>
         /// <param name="unPath">解压到目标目录</param>
         /// <returns>true 成功,false失败</returns>
-        internal static bool Un001File(System.IO.Stream un001Stream, string unPath)
+        internal static bool UnZipFile(System.IO.Stream un001Stream, string unPath)
         {
             lock (unObject)
             {

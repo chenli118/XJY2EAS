@@ -50,7 +50,7 @@ namespace XJY2EAS
                         thirdDataFiles = doubleZeroFile.Replace(".001", "");
                         if (Directory.Exists(thirdDataFiles)) Directory.Move(thirdDataFiles, thirdDataFiles + DateTime.Now.Ticks);
                         Directory.CreateDirectory(thirdDataFiles);
-                        var files = Un001File(doubleZeroFile, thirdDataFiles);
+                        var files = UnZipFile(doubleZeroFile, thirdDataFiles);
                         GetCustomerInfo();
                         if (dbName.Length == 0)
                         {
@@ -67,7 +67,7 @@ namespace XJY2EAS
                         thirdDataFiles = string.Empty;
                         MessageBox.Show(ex.Message);
                     }
-
+                    MessageBox.Show("数据文件解压完成！");
                 }
             }
         }
@@ -78,6 +78,7 @@ namespace XJY2EAS
         /// <param name="e"></param>
         private void Button4_Click(object sender, EventArgs e)
         {
+            if (thirdDataFiles.Length == 0) { MessageBox.Show("请选择采集后的数据文件!"); return; }
             DBInit(thirdDataFiles); 
             InitProject(conStr);
             InitAccount(conStr);
@@ -90,7 +91,7 @@ namespace XJY2EAS
         }
         private void DBInit(string thirdDataFiles)
         {
-            if (thirdDataFiles.Length == 0) { MessageBox.Show("请选择采集后的数据文件!"); return; }
+         
             string[] files = System.IO.Directory.GetFiles(thirdDataFiles);
             //过滤需要导入的db文件
             #region 001ToDb
@@ -115,36 +116,31 @@ namespace XJY2EAS
             GetPeriod(conStr);
             MessageBox.Show("数据库创建完成！");
         }
-        private string[] Un001File(string filepath,string targetDirectory)
+        private string[] UnZipFile(string filepath,string targetDirectory)
         {
             try
-            {
-              
-                using (var stream = new FileStream(filepath, FileMode.Open,
-                             FileAccess.Read, FileShare.ReadWrite))
+            {             
+                using (var stream = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    UnZip001File.Un001File(stream, targetDirectory);
-
+                    UnZipByCom.UnZipFile(stream, targetDirectory);
                     //获取所有文件添加到
                     var files = Directory.GetFiles(targetDirectory, "*.*",
                         SearchOption.AllDirectories).Where(s => s != null && (s.EndsWith(".db")
                             || s.EndsWith(".ini"))).ToArray();
-
                     return files;
                 }
-
             }
             catch (Exception ex)
-            { throw new Exception("解压001文件错误:" + ex.Message, ex); }
+            {
+                throw new Exception("解压001文件错误:" + ex.Message, ex);
+            }
         }
         
        
 
         private async void PD2SqlDB(string filepath,String dbName)
         {
-
-            string filename = Path.GetFileNameWithoutExtension(filepath);           
-            conStr = conStr.Replace("master", dbName);
+            string filename = Path.GetFileNameWithoutExtension(filepath);      
             try
             {
                 var _ParadoxTable = new ParadoxReader.ParadoxTable(Path.GetDirectoryName(filepath), filename);
@@ -154,10 +150,22 @@ namespace XJY2EAS
                 dt.TableName = Path.GetFileNameWithoutExtension(filepath);//_ParadoxTable.TableName;
                 if (columns.Length == 0 || _ParadoxTable.RecordCount == 0)
                     return;
-                StringBuilder strSpt =
-                    new StringBuilder(string.Format("IF object_id('{0}') IS NOT NULL  drop table  {1}", dt.TableName, dt.TableName));
-                strSpt.AppendLine(" create    table   " + dt.TableName + "(" + Environment.NewLine); 
-                //strSpt.AppendLine("PID " + "varchar(1000)  COLLATE Chinese_PRC_CS_AS_KS_WS  null,");
+
+                string tableName = dt.TableName;
+                string typeName = "[dbo].[" + dt.TableName + "Type]";
+                string procName = "usp_insert" + dt.TableName;
+
+                StringBuilder strSpt = new StringBuilder(string.Format("IF object_id('{0}') IS NOT NULL  drop table  {0}",tableName));
+                strSpt.AppendLine(" create    table   " + tableName + "(" + Environment.NewLine);                
+        
+                StringBuilder strTypetv = new StringBuilder(string.Format("IF type_id('{0}') IS NOT NULL  drop TYPE  "+ typeName, typeName));
+                strTypetv.AppendLine(" create    TYPE  "+ typeName + " as TABLE(" + Environment.NewLine);
+
+                string preProc = " IF EXISTS (SELECT * FROM dbo.sysobjects WHERE type = 'P' AND name = '" + procName + "')   " +
+                    " BEGIN       DROP  Procedure " + procName + "   END  ";
+                string createProc = " CREATE PROCEDURE " +procName + "    (@tvpNewValues "+typeName+" READONLY)" +
+                    "as  insert into "+tableName+"   select *   from  @tvpNewValues  ";
+
                 for (int i = 0; i < columns.Length; i++)
                 {
                     string fieldName = columns[i];
@@ -171,24 +179,32 @@ namespace XJY2EAS
                         case ParadoxReader.ParadoxFieldTypes.Logical:
                         case ParadoxReader.ParadoxFieldTypes.Short:
                             strSpt.AppendLine(fieldName + " " + "decimal(19,3) null DEFAULT 0,");
+                            strTypetv.AppendLine(fieldName + " " + "decimal(19,3) null DEFAULT 0,");
                             dc.DataType = typeof(System.Decimal);
                             break;
                         default:
                             strSpt.AppendLine(fieldName + " " + "nvarchar(1000),");
+                            strTypetv.AppendLine(fieldName + " " + "nvarchar(1000),");
                             dc.DataType = typeof(System.String);
                             break;
                     }
                     dt.Columns.Add(dc);
                 }
-
-                strSpt.AppendLine(")");
-                string createDTSql = strSpt.ToString();
+               string dtstring = strSpt.ToString().Substring(0, strSpt.Length - 3) +")   " + strTypetv.ToString().Substring(0, strTypetv.Length - 3) + ")";
+                string createDTSql = preProc+ dtstring + " GO "+ createProc;
                 if (!string.IsNullOrEmpty(createDTSql))
-                {
-                    SqlMapperUtil.InsertUpdateOrDeleteSql(createDTSql, null,conStr);
+                { 
+                    SqlServerHelper.ExecuteSql(createDTSql, conStr);
                 }
+
+                int idx = 0;
                 foreach (var rec in _ParadoxTable.Enumerate())
                 {
+                    if (idx % 1000 == 0)
+                    {
+                        SqlServerHelper.ExecuteProcWithStruct(procName, conStr, typeName, dt);
+                        dt.Rows.Clear();
+                    }
                     DataRow dr = dt.NewRow();
                     for (int i = 0; i < _ParadoxTable.FieldCount; i++)
                     {
@@ -197,12 +213,14 @@ namespace XJY2EAS
                             dr[_ParadoxTable.FieldNames[i]] = OV;
                     }
                     dt.Rows.Add(dr);
+                    idx++;
                 }
 
                 _ParadoxTable.Dispose();
                 _ParadoxTable = null;
-
-                SqlServerHelper.SqlBulkCopy(dt, conStr);
+                SqlServerHelper.ExecuteProcWithStruct(procName, conStr, typeName, dt);
+                dt.Dispose();
+                dt=null;
             }
             catch (Exception ex)
             {
@@ -223,15 +241,15 @@ namespace XJY2EAS
 
             }
             conStr = conStr.Replace("master", dbName);
-            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\00.EAS_FnAndTables.Sql")), conStr);
-            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\01.Create6BasicTables.Sql")), conStr);
+            SqlServerHelper.ExecuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\00.EAS_FnAndTables.Sql")), conStr);
+            SqlServerHelper.ExecuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\01.Create6BasicTables.Sql")), conStr);
            
             string kjqjInsert = "delete dbo.kjqj where Projectid='{0}'  " +
                 " insert  dbo.kjqj(ProjectID,CustomerCode,CustomerName,BeginDate,EndDate,KJDate)" +
                 "  select '{0}','{1}','{1}','{2}','{3}','{4}'";
-            SqlServerHelper.ExcuteSql(string.Format(kjqjInsert, dbName,clientID,DateTime.Parse(auditYear+"-01-01"), DateTime.Parse(auditYear + "-12-31"), auditYear), conStr);
-            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\070.AccountClass.sql")), conStr);
-            SqlServerHelper.ExcuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\PackConfigTable.sql")), conStr);
+            SqlServerHelper.ExecuteSql(string.Format(kjqjInsert, dbName,clientID,DateTime.Parse(auditYear+"-01-01"), DateTime.Parse(auditYear + "-12-31"), auditYear), conStr);
+            SqlServerHelper.ExecuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\070.AccountClass.sql")), conStr);
+            SqlServerHelper.ExecuteSql(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\PackConfigTable.sql")), conStr);
 
         }
         
@@ -288,7 +306,7 @@ namespace XJY2EAS
                    new System.IO.StreamReader(accountinfofile, UnicodeEncoding.GetEncoding("GBK")))
             {
                 var accYear = "";
-                string str = "";
+                string str = ""; 
                 while ((str = sr.ReadLine()) != null)
                 {
                     string[] arr = str.Split('=');
@@ -313,14 +331,31 @@ namespace XJY2EAS
         }
         private void Button1_Click(object sender, EventArgs e)
         {
+            if (thirdDataFiles.Length == 0) { MessageBox.Show("请选择采集后的数据文件!"); return; }
             DBInit(thirdDataFiles);
         }
         private void Button2_Click(object sender, EventArgs e)
         {
-            CreateMidTables();
-            MessageBox.Show("转换中间表创建成功!");
+            InitAccount(conStr);
+            InitVoucher(conStr);
+            MessageBox.Show("转换凭证库成功!");
         }
-      
+        private void Button3_Click(object sender, EventArgs e)
+        {
+            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\ProcFirstTypeCode.sql")), null, conStr);
+
+            #region old
+
+            //SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\07.Convet_voucher_account_project.sql")).Replace("_EAS_", dbName), null, conStr);
+            //SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\08.Update_syjz_fllx.sql")).Replace("_EAS_", dbName), null, conStr);
+            //SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\09.init_tbdetail.sql")).Replace("_EAS_", dbName), null, conStr);
+            //SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\10.UpdateProject4tbvoucher.sql")).Replace("_EAS_", dbName), null, conStr);
+            //SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\11.InitTBAux.sql")).Replace("_EAS_", dbName), null, conStr);
+            //SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\12.Updatedfjfje_tbdetail_tbaux.sql")).Replace("_EAS_", dbName), null, conStr);
+            //SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\13.UpdateTbQqccgz.sql")).Replace("_EAS_", dbName), null, conStr);
+            #endregion
+            MessageBox.Show("处理成功！");
+        }
 
         private void UpdateTBDetailAndTBAux(string conStr)
         { 
@@ -538,93 +573,25 @@ namespace XJY2EAS
 
         private void InitVoucher(string conStr)
         {
-            DataTable dtVoucher = new DataTable();
-            dtVoucher.TableName = "TBVoucher";
-            #region columns
-            dtVoucher.Columns.Add("VoucherID");
-            dtVoucher.Columns.Add("Clientid");
-            dtVoucher.Columns.Add("ProjectID");
-            dtVoucher.Columns.Add("IncNo");
-            dtVoucher.Columns.Add("Date", typeof(DateTime));
-            dtVoucher.Columns.Add("Period", typeof(int));
-            dtVoucher.Columns.Add("Pzlx");
-            dtVoucher.Columns.Add("Pzh");
-            dtVoucher.Columns.Add("Djh");
-            dtVoucher.Columns.Add("AccountCode");
-            dtVoucher.Columns.Add("ProjectCode");
-            dtVoucher.Columns.Add("Zy");
-            dtVoucher.Columns.Add("Jfje", typeof(decimal));
-            dtVoucher.Columns.Add("Dfje", typeof(decimal));
-            dtVoucher.Columns.Add("Jfsl", typeof(decimal));
-            dtVoucher.Columns.Add("Dfsl", typeof(decimal));
-            dtVoucher.Columns.Add("ZDR");
-            dtVoucher.Columns.Add("dfkm");
-            dtVoucher.Columns.Add("Jd", typeof(int));
-            dtVoucher.Columns.Add("Fsje", typeof(decimal));
-            dtVoucher.Columns.Add("Wbdm");
-            dtVoucher.Columns.Add("Wbje", typeof(decimal));
-            dtVoucher.Columns.Add("Hl", typeof(decimal));
-            dtVoucher.Columns.Add("FLLX", typeof(int));
-            dtVoucher.Columns.Add("SampleSelectedYesNo", typeof(int));
-            dtVoucher.Columns.Add("SampleSelectedType", typeof(int));
-            dtVoucher.Columns.Add("TBGrouping");
-            dtVoucher.Columns.Add("EASREF");
-            dtVoucher.Columns.Add("AccountingAge", typeof(int));
-            dtVoucher.Columns.Add("qmyegc", typeof(int));
-            dtVoucher.Columns.Add("Stepofsample", typeof(int));
-            dtVoucher.Columns.Add("ErrorYesNo", typeof(int));
-            dtVoucher.Columns.Add("FDetailID", typeof(int));
-            #endregion
 
-            string jzpzSQL = "select Pz_Date,Kjqj,pzrq,Pzh,Djh,IncNo,fjzs,Kmdm,zy, Jd,Wbdm,Wbje,Hl,case when jd = '借' then rmb else 0 end as jfje,  " +
-                "case when jd = '贷' then rmb else 0 end as dfje,  " +
-                "case when jd = '借' then sl  else 0 end as jfsl,  " +
-                "case when jd = '贷' then sl  else 0 end as dfsl,  sr,  FDetailID,DFKM from jzpz ";
-            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(jzpzSQL, null, conStr);
-            foreach (var vd in ds)
+            string jzpzSQL = " truncate table TBVoucher" +
+                " insert  TBVoucher(VoucherID,Clientid,ProjectID,IncNo,Date,Period,Pzh,Djh,AccountCode,Zy,Jfje,Dfje,jfsl,jd,dfsl, ZDR,dfkm,Wbdm,Wbje,Hl,fsje,fllx,FDetailID) ";
+            jzpzSQL += "select  newid() as VoucherID,'" + clientID + "' as clientID, '" + dbName + "' as ProjectID,IncNo, Pz_Date as [date],Kjqj as Period ,Pzh,Djh,Kmdm as AccountCode ," +
+               " zy,case when jd = '借' then rmb else 0 end as jfje,  " +
+               " case when jd = '贷' then rmb else 0 end as dfje,  " +
+               " case when jd = '借' then isnull(sl,0)  else 0 end as jfsl,  " +
+               //" case when jd = '借' and rmb>0	then 1 else -1 end *(Jfje+Dfje) as fsje," +
+               " case when jd = '借' and rmb>0	then 1 else -1 end	as jd, " +
+               " case when jd = '贷' then isnull(sl,0)  else 0 end as dfsl,  sr as ZDR, DFKM,Wbdm,Wbje,isnull(Hl,0) as Hl, 0 AS fsje, 1 as fllx, FDetailID from jzpz ";
+            SqlMapperUtil.CMDExcute(jzpzSQL, null, conStr);
+
+            string expzk = " select 	Pzk_TableName	from	pzk	where	Pzk_TableName!='jzpz' and Pzk_TableName like 'jzpz%' ";
+            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(expzk, null, conStr);
+            foreach (var d in ds)
             {
-                DataRow dr = dtVoucher.NewRow();
-                dr["VoucherID"] = Guid.NewGuid();
-                dr["Clientid"] = clientID;
-                dr["ProjectID"] = dbName;
-                dr["IncNo"] = vd.IncNo;
-                dr["Date"] = vd.Pz_Date;
-                dr["Period"] = vd.Kjqj;
-                dr["Pzlx"] = "";
-                dr["Pzh"] = vd.Pzh;
-                dr["Djh"] = vd.Djh == null ? 0 : vd.Djh;
-                dr["AccountCode"] = vd.Kmdm;
-                dr["ProjectCode"] = "";
-                dr["Zy"] = vd.zy;
-                dr["Jfje"] = vd.jfje == null ? 0M : vd.jfje;
-                dr["Dfje"] = vd.dfje == null ? 0M : vd.dfje;
-                dr["Jfsl"] = vd.jfsl == null ? 0M : vd.jfsl;
-                dr["Dfsl"] = vd.dfsl == null ? 0M : vd.dfsl;
-                dr["ZDR"] = vd.sr;
-                dr["dfkm"] = vd.DFKM;
-                dr["Jd"] = vd.Jd == "借" ? 1 : -1;
-                dr["Fsje"] = Convert.ToInt32(dr["Jd"]) * (Convert.ToDecimal(dr["Jfje"]) + Convert.ToDecimal(dr["Dfje"]));
-                dr["Wbdm"] = vd.Wbdm == null ? 0M : vd.Wbdm;
-                dr["Wbje"] = vd.Wbje == null ? 0M : vd.Wbje;
-                dr["Hl"] = vd.Hl;
-                dr["FLLX"] = 1;
-                dr["FDetailID"] = vd.FDetailID == null ? -1 : vd.FDetailID;
-                dr["SampleSelectedYesNo"] = 0M;
-                dr["SampleSelectedType"] = 0M;
-                dr["TBGrouping"] = "";
-                dr["EASREF"] = "";
-                dr["AccountingAge"] = 0M;
-                dr["qmyegc"] = 0M;
-                dr["Stepofsample"] = 0M;
-                dr["ErrorYesNo"] = 0M;
-                dtVoucher.Rows.Add(dr);
-
+                jzpzSQL = jzpzSQL.Replace("from jzpz", "from "+d.Pzk_TableName).Replace("truncate table TBVoucher","");
+                SqlMapperUtil.CMDExcute(jzpzSQL, null, conStr);
             }
-             
-
-            string execSQL = " truncate table TBVoucher ";
-            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
-            SqlServerHelper.SqlBulkCopy(dtVoucher, conStr);
             string updatesql = " update v set v.fllx = case when a.Syjz = 0 then 1 else a.Syjz end   from dbo.tbvoucher v     join ACCOUNT a on a.AccountCode = v.AccountCode  ";
             SqlMapperUtil.CMDExcute(updatesql, null, conStr);
             MessageBox.Show("凭证表初始化完成！");
@@ -639,8 +606,8 @@ namespace XJY2EAS
             accountTable.Columns.Add("AccountCode");
             accountTable.Columns.Add("UpperCode");
             accountTable.Columns.Add("AccountName");
-            accountTable.Columns.Add("Attribute",typeof(int));
-            accountTable.Columns.Add("Jd", typeof(int));
+            //accountTable.Columns.Add("Attribute",typeof(int));
+            //accountTable.Columns.Add("Jd", typeof(int));
             accountTable.Columns.Add("Hsxms", typeof(int));
             accountTable.Columns.Add("TypeCode");
             accountTable.Columns.Add("Jb", typeof(int));
@@ -652,7 +619,7 @@ namespace XJY2EAS
             accountTable.Columns.Add("Ncsl", typeof(int));
             accountTable.Columns.Add("Syjz", typeof(int));
             //按级别排序
-            string qsql = "SELECT km.kmdm,km.kmmc,KM_TYPE,KM_YEFX,Xmhs,Kmjb,IsMx,Ncye,Jfje1,Dfje1,Ncsl  FROM KM   left join kmye  on km.kmdm = kmye.kmdm  order by Kmjb";
+            string qsql = "SELECT km.kmdm,km.kmmc,Xmhs,Kmjb,IsMx,Ncye,Jfje1,Dfje1,Ncsl  FROM KM   left join kmye  on km.kmdm = kmye.kmdm  order by Kmjb";
             dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
             foreach (var vd in ds)
             {
@@ -661,8 +628,8 @@ namespace XJY2EAS
                 dr["AccountCode"] = vd.kmdm;
                 dr["UpperCode"] ="";
                 dr["AccountName"] = vd.kmmc;
-                dr["Attribute"] = vd.KM_TYPE == "损益" ? 1 : 0;
-                dr["Jd"] = vd.KM_YEFX;
+                //dr["Attribute"] = vd.KM_TYPE == "损益" ? 1 : 0;
+                //dr["Jd"] = vd.KM_YEFX;
                 dr["Hsxms"] = 0;
                 dr["TypeCode"] = "";
                 dr["Jb"] = vd.Kmjb;
@@ -673,9 +640,7 @@ namespace XJY2EAS
                 dr["Dfje"] = vd.Dfje1 == null ? 0M : vd.Dfje1;
                 dr["Ncsl"] = vd.Ncsl == null ? 0M : vd.Ncsl;
                 dr["Syjz"] = 0; 
-                accountTable.Rows.Add(dr);
-
-               
+                accountTable.Rows.Add(dr);               
             }
             BuildUpperCode(accountTable,conStr);
             BuildTypeCode(accountTable, conStr);
@@ -775,22 +740,12 @@ namespace XJY2EAS
 
         }
 
-        private void Button3_Click(object sender, EventArgs e)
+       
+
+        private void Button5_Click(object sender, EventArgs e)
         {
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\07.Convet_voucher_account_project.sql")).Replace("_EAS_", dbName), null, conStr);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\08.Update_syjz_fllx.sql")).Replace("_EAS_", dbName), null, conStr);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\09.init_tbdetail.sql")).Replace("_EAS_", dbName), null, conStr);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\10.UpdateProject4tbvoucher.sql")).Replace("_EAS_", dbName), null, conStr);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\11.InitTBAux.sql")).Replace("_EAS_", dbName), null, conStr);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\12.Updatedfjfje_tbdetail_tbaux.sql")).Replace("_EAS_", dbName), null, conStr);
-            SqlMapperUtil.CMDExcute(File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SqlScript\\13.UpdateTbQqccgz.sql")).Replace("_EAS_", dbName), null, conStr);
-
-            MessageBox.Show("导入成功！");
+            
         }
-
-
-
-
     }
     public class CustomerInfo
     {

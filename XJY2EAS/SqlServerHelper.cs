@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace XJY2EAS
 {
-   internal class SqlServerHelper
+    internal class SqlServerHelper
     {
         public async static void SqlBulkCopy(System.Data.DataTable dt, string conStr)
         {
@@ -30,11 +30,37 @@ namespace XJY2EAS
                 }
 
             }
-          
+
         }
-        public static int ExcuteSql(string sql, string constr)
+        public static int ExecuteProcWithStruct(string pName, string conStr,string typeName,object pValues)
         {
-            using (System.Data.SqlClient.SqlConnection conn = new System.Data.SqlClient.SqlConnection(constr))
+            using (System.Data.SqlClient.SqlConnection conn = new System.Data.SqlClient.SqlConnection(conStr))
+            {
+                try
+                {
+                    if (conn.State != System.Data.ConnectionState.Open) conn.Open();
+                    System.Data.SqlClient.SqlCommand sqlCommand = new System.Data.SqlClient.SqlCommand();
+                    sqlCommand.CommandType = CommandType.StoredProcedure;
+                    SqlParameter tvpParam = sqlCommand.Parameters.AddWithValue("tvpNewValues", pValues);
+                    tvpParam.SqlDbType = SqlDbType.Structured;
+                    tvpParam.TypeName = typeName;
+                    sqlCommand.CommandText = pName;
+                    sqlCommand.Connection = conn;
+                    sqlCommand.ExecuteNonQuery();
+                     
+                }
+                catch (Exception Err)
+                {
+
+                }
+                
+                }
+            return -1;
+        }
+
+        public static int ExecuteSql(string sql, string conStr)
+        {
+            using (System.Data.SqlClient.SqlConnection conn = new System.Data.SqlClient.SqlConnection(conStr))
             {
                 try
                 {
