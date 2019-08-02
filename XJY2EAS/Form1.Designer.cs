@@ -106,7 +106,7 @@
             this.button4.TabIndex = 4;
             this.button4.Text = "一键导入";
             this.button4.UseVisualStyleBackColor = true;
-            this.button4.Click += new System.EventHandler(this.Button4_Click);
+            this.button4.Click += new System.EventHandler(this.OnekeyImport_Click);
             // 
             // button5
             // 
@@ -127,7 +127,7 @@
             this.button6.TabIndex = 7;
             this.button6.Text = "选择采集的文件";
             this.button6.UseVisualStyleBackColor = true;
-            this.button6.Click += new System.EventHandler(this.Button6_Click);
+            this.button6.Click += new System.EventHandler(this.OpenDbFile_Click);
             // 
             // label1
             // 

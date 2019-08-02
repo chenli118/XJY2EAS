@@ -29,14 +29,12 @@ namespace XJY2EAS
         private List<string> Importfiles = new List<string>();
         public Form1()
         {
-            InitializeComponent();
-            string[] xjytables = { "km", "kmye", "xm", "xmye", "bm", "bmye", "wl", "wlye", "t_fzye", "t_itemclass", "t_itemdetail", "jzpz", "pzk" };
-            Importfiles.AddRange(xjytables);          
-
+            InitializeComponent(); 
+            Importfiles.AddRange( new [] { "km", "kmye", "xm", "xmye", "bm", "bmye", "wl", "wlye", "t_fzye", "t_itemclass", "t_itemdetail", "jzpz", "pzk" });
         }
         string thirdDataFiles = string.Empty;
         //选择文件
-        private void Button6_Click(object sender, EventArgs e)
+        private void OpenDbFile_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
@@ -76,13 +74,14 @@ namespace XJY2EAS
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Button4_Click(object sender, EventArgs e)
+        private void OnekeyImport_Click(object sender, EventArgs e)
         {
             if (thirdDataFiles.Length == 0) { MessageBox.Show("请选择采集后的数据文件!"); return; }
             DBInit(thirdDataFiles); 
             InitProject(conStr);
             InitAccount(conStr);
             InitVoucher(conStr);
+            GetPeriod(conStr);
             InitTBFS(conStr);
             InitTbDetail(conStr);
             InitFdetail(conStr);
@@ -113,7 +112,7 @@ namespace XJY2EAS
             });
 
             #endregion
-            GetPeriod(conStr);
+           
             MessageBox.Show("数据库创建完成！");
         }
         private string[] UnZipFile(string filepath,string targetDirectory)
