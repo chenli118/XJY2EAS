@@ -28,13 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.button1 = new System.Windows.Forms.Button();
             this.button2 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
             this.radialMenuItem1 = new C1.Win.C1Command.RadialMenuItem();
-            this.c1CommandHolder1 = new C1.Win.C1Command.C1CommandHolder();
-            this.c1Command1 = new C1.Win.C1Command.C1Command();
             this.button4 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
             this.button6 = new System.Windows.Forms.Button();
@@ -43,13 +40,15 @@
             this.txtBeginDate = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.txtEndDate = new System.Windows.Forms.TextBox();
-            ((System.ComponentModel.ISupportInitialize)(this.c1CommandHolder1)).BeginInit();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.label3 = new System.Windows.Forms.Label();
+            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.SuspendLayout();
             // 
             // button1
             // 
             this.button1.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.button1.Location = new System.Drawing.Point(261, 152);
+            this.button1.Location = new System.Drawing.Point(235, 141);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(258, 64);
             this.button1.TabIndex = 0;
@@ -60,7 +59,7 @@
             // button2
             // 
             this.button2.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.button2.Location = new System.Drawing.Point(261, 252);
+            this.button2.Location = new System.Drawing.Point(235, 232);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(258, 64);
             this.button2.TabIndex = 1;
@@ -71,7 +70,7 @@
             // button3
             // 
             this.button3.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
-            this.button3.Location = new System.Drawing.Point(261, 353);
+            this.button3.Location = new System.Drawing.Point(235, 333);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(258, 64);
             this.button3.TabIndex = 2;
@@ -85,22 +84,10 @@
             this.radialMenuItem1.Text = "test1";
             this.radialMenuItem1.ToolTip = "test1";
             // 
-            // c1CommandHolder1
-            // 
-            this.c1CommandHolder1.Commands.Add(this.c1Command1);
-            this.c1CommandHolder1.Owner = this;
-            // 
-            // c1Command1
-            // 
-            this.c1Command1.Image = ((System.Drawing.Image)(resources.GetObject("c1Command1.Image")));
-            this.c1Command1.Name = "c1Command1";
-            this.c1Command1.ShortcutText = "";
-            this.c1Command1.Text = "打开（&O）";
-            // 
             // button4
             // 
             this.button4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.button4.Location = new System.Drawing.Point(12, 152);
+            this.button4.Location = new System.Drawing.Point(12, 132);
             this.button4.Name = "button4";
             this.button4.Size = new System.Drawing.Size(196, 265);
             this.button4.TabIndex = 4;
@@ -111,7 +98,7 @@
             // button5
             // 
             this.button5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.button5.Location = new System.Drawing.Point(585, 152);
+            this.button5.Location = new System.Drawing.Point(556, 132);
             this.button5.Name = "button5";
             this.button5.Size = new System.Drawing.Size(196, 265);
             this.button5.TabIndex = 6;
@@ -133,7 +120,7 @@
             // 
             this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(261, 38);
+            this.label1.Location = new System.Drawing.Point(232, 38);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(98, 18);
             this.label1.TabIndex = 8;
@@ -142,7 +129,7 @@
             // txtCustomerCode
             // 
             this.txtCustomerCode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtCustomerCode.Location = new System.Drawing.Point(365, 35);
+            this.txtCustomerCode.Location = new System.Drawing.Point(336, 35);
             this.txtCustomerCode.Name = "txtCustomerCode";
             this.txtCustomerCode.Size = new System.Drawing.Size(416, 28);
             this.txtCustomerCode.TabIndex = 9;
@@ -150,7 +137,7 @@
             // txtBeginDate
             // 
             this.txtBeginDate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtBeginDate.Location = new System.Drawing.Point(362, 87);
+            this.txtBeginDate.Location = new System.Drawing.Point(333, 87);
             this.txtBeginDate.Name = "txtBeginDate";
             this.txtBeginDate.Size = new System.Drawing.Size(157, 28);
             this.txtBeginDate.TabIndex = 11;
@@ -159,7 +146,7 @@
             // 
             this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(258, 90);
+            this.label2.Location = new System.Drawing.Point(229, 90);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(98, 18);
             this.label2.TabIndex = 10;
@@ -168,16 +155,34 @@
             // txtEndDate
             // 
             this.txtEndDate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtEndDate.Location = new System.Drawing.Point(585, 87);
+            this.txtEndDate.Location = new System.Drawing.Point(556, 87);
             this.txtEndDate.Name = "txtEndDate";
             this.txtEndDate.Size = new System.Drawing.Size(196, 28);
             this.txtEndDate.TabIndex = 13;
+            // 
+            // progressBar1
+            // 
+            this.progressBar1.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.progressBar1.Location = new System.Drawing.Point(0, 445);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(771, 35);
+            this.progressBar1.TabIndex = 14;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(9, 413);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(0, 18);
+            this.label3.TabIndex = 15;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(771, 480);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.txtEndDate);
             this.Controls.Add(this.txtBeginDate);
             this.Controls.Add(this.label2);
@@ -191,7 +196,6 @@
             this.Controls.Add(this.button1);
             this.Name = "Form1";
             this.Text = "新纪元数据入库";
-            ((System.ComponentModel.ISupportInitialize)(this.c1CommandHolder1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -202,8 +206,6 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Button button3;
-        private C1.Win.C1Command.C1CommandHolder c1CommandHolder1;
-        private C1.Win.C1Command.C1Command c1Command1;
         private System.Windows.Forms.Button button4;
         private C1.Win.C1Command.RadialMenuItem radialMenuItem1;
         private System.Windows.Forms.TextBox txtBeginDate;
@@ -213,6 +215,9 @@
         private System.Windows.Forms.Button button6;
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.TextBox txtEndDate;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.ProgressBar progressBar1;
+        private System.ComponentModel.BackgroundWorker backgroundWorker1;
     }
 }
 

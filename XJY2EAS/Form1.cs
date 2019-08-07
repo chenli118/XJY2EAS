@@ -20,19 +20,73 @@ namespace XJY2EAS
 {
     public partial class Form1 : Form
     {
-        private string auditYear = "";
-        private string projectid = "";
-        private string accoutNumber = "";
-        private string clientID = "";       
-        private string dbName = "";
-        string conStr = ConfigurationManager.AppSettings["ConString"];
+        private string dbName = string.Empty;        
+        private string clientID = string.Empty;
+        private string auditYear = string.Empty;
+        private string accoutNumber = string.Empty;
+        private string thirdDataFiles = string.Empty;        
         private List<string> Importfiles = new List<string>();
+        string conStr = ConfigurationManager.AppSettings["ConString"];
         public Form1()
         {
-            InitializeComponent(); 
+            InitializeComponent();
+            backgroundWorker1.ProgressChanged += BackgroundWorker1_ProgressChanged;
+            backgroundWorker1.RunWorkerCompleted += BackgroundWorker1_RunWorkerCompleted;
+            backgroundWorker1.DoWork += BackgroundWorker1_DoWork;
+            backgroundWorker1.WorkerReportsProgress = true;
             Importfiles.AddRange( new [] { "km", "kmye", "xm", "xmye", "bm", "bmye", "wl", "wlye", "t_fzye", "t_itemclass", "t_itemdetail", "jzpz", "pzk" });
         }
-        string thirdDataFiles = string.Empty;
+
+        private void BackgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+        {
+            backgroundWorker1.ReportProgress(1, "开始初始化数据库...");
+            DBInit();
+            backgroundWorker1.ReportProgress(5, "初始化数据库完毕!");
+            backgroundWorker1.ReportProgress(5, "开始装入项目表数据...");
+            InitProject(conStr);
+            backgroundWorker1.ReportProgress(6, "项目表数据加载完毕!");
+            backgroundWorker1.ReportProgress(6, "开始装入科目表数据...");
+            InitAccount(conStr);
+            backgroundWorker1.ReportProgress(8, "科目表数据加载完毕!");
+            backgroundWorker1.ReportProgress(8, "开始装入凭证表数据...");
+            InitVoucher(conStr);
+            backgroundWorker1.ReportProgress(38, "凭证表数据加载完毕!");
+            backgroundWorker1.ReportProgress(38, "开始更新期间范围...");
+            GetPeriod(conStr);
+            backgroundWorker1.ReportProgress(39, "更新期间范围完成!");
+            backgroundWorker1.ReportProgress(39, "开始装入业务循环报表数据...");
+            InitTBFS(conStr);
+            backgroundWorker1.ReportProgress(40, "业务循环报表数据加载完成！");
+            backgroundWorker1.ReportProgress(40, "开始装入TBDetail数据...");
+            InitTbDetail(conStr);
+            backgroundWorker1.ReportProgress(45, "TBDetail数据加载完成！");
+            backgroundWorker1.ReportProgress(45, "开始装入AuxiliaryFDetail数据...");
+            InitFdetail(conStr);
+            backgroundWorker1.ReportProgress(55, "AuxiliaryFDetail数据加载完成！");
+            backgroundWorker1.ReportProgress(55, "开始装入TBAux数据...");
+            InitTBAux(conStr);
+            backgroundWorker1.ReportProgress(60, "TBAux数据加载完成！");
+            backgroundWorker1.ReportProgress(65, "开始更新Tbdetail、TBAux...");
+            UpdateTBDetailAndTBAux(conStr);
+            backgroundWorker1.ReportProgress(100, "更新Tbdetail、TBAux完成！");
+        }
+
+        private void BackgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string msg = "处理完毕！";
+            if (e.Cancelled) msg = "用户已取消操作！";
+            this.label3.Text = msg;
+            this.label3.Update();
+            MessageBox.Show(msg);
+        }
+
+        private void BackgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            progressBar1.Value = e.ProgressPercentage;
+            this.label3.Text = e.UserState.ToString();
+            this.label3.Update();
+        }
+
         //选择文件
         private void OpenDbFile_Click(object sender, EventArgs e)
         {
@@ -77,20 +131,15 @@ namespace XJY2EAS
         private void OnekeyImport_Click(object sender, EventArgs e)
         {
             if (thirdDataFiles.Length == 0) { MessageBox.Show("请选择采集后的数据文件!"); return; }
-            DBInit(thirdDataFiles); 
-            InitProject(conStr);
-            InitAccount(conStr);
-            InitVoucher(conStr);
-            GetPeriod(conStr);
-            InitTBFS(conStr);
-            InitTbDetail(conStr);
-            InitFdetail(conStr);
-            InitTBAux(conStr);
-            UpdateTBDetailAndTBAux(conStr);
+            progressBar1.Maximum = 100;
+            progressBar1.Step = 1;
+            progressBar1.Value = 0;
+            backgroundWorker1.RunWorkerAsync();
+
+
         }
-        private void DBInit(string thirdDataFiles)
-        {
-         
+        private void DBInit()
+        {         
             string[] files = System.IO.Directory.GetFiles(thirdDataFiles);
             //过滤需要导入的db文件
             #region 001ToDb
@@ -113,7 +162,7 @@ namespace XJY2EAS
 
             #endregion
            
-            MessageBox.Show("数据库创建完成！");
+            
         }
         private string[] UnZipFile(string filepath,string targetDirectory)
         {
@@ -258,7 +307,7 @@ namespace XJY2EAS
             {
                 DateTimeFormat = { ShortDatePattern = "yyyy-MM-dd", FullDateTimePattern = "yyyy-MM-dd HH:mm:ss", LongTimePattern = "HH:mm:ss" }
             };
-            string qStr = "select distinct  min(pz_date) bd,  max(pz_date) ed from jzpz";
+            string qStr = "select  max(date) ed,MIN(date) bd from TBVoucher";
             dynamic pzdt = SqlMapperUtil.SqlWithParamsSingle<dynamic>(qStr, null, conStr);
             foreach (var s in pzdt)
             {
@@ -268,26 +317,28 @@ namespace XJY2EAS
                 {
                     if (beginDate != DateTime.MinValue && endDate != DateTime.MinValue)
                     {
-                        this.txtBeginDate.Text = beginDate.ToShortDateString();
+                        this.txtBeginDate.Invoke(new Action<string>((str) => { txtBeginDate.Text = str; }), beginDate.ToShortDateString());
+                        string endDateStr = endDate.ToShortDateString();
                         switch (endDate.Month / 3)
                         {
                             case 0:
-                                txtEndDate.Text = endDate.ToShortDateString();
+                                endDateStr = endDate.ToShortDateString();
                                 break;
                             case 1:
-                                txtEndDate.Text = endDate.Year + "-03-31";
+                                endDateStr = endDate.Year + "-03-31";
                                 break;
                             case 2:
-                                txtEndDate.Text = endDate.Year + "-06-30";
+                                endDateStr = endDate.Year + "-06-30";
                                 break;
                             case 3:
-                                txtEndDate.Text = endDate.Year + "-09-30";
+                                endDateStr = endDate.Year + "-09-30";
                                 break;
                             case 4:
-                                txtEndDate.Text = endDate.Year + "-12-31";
+                                endDateStr = endDate.Year + "-12-31";
                                 break;
 
                         }
+                        this.txtEndDate.Invoke(new Action<string>((str) => { txtEndDate.Text = str; }), endDateStr);
                     }
                 }
 
@@ -331,7 +382,8 @@ namespace XJY2EAS
         private void Button1_Click(object sender, EventArgs e)
         {
             if (thirdDataFiles.Length == 0) { MessageBox.Show("请选择采集后的数据文件!"); return; }
-            DBInit(thirdDataFiles);
+            DBInit();
+            MessageBox.Show("数据库创建完成！");
         }
         private void Button2_Click(object sender, EventArgs e)
         {
@@ -361,7 +413,7 @@ namespace XJY2EAS
             var p = new DynamicParameters();
             p.Add("@pzEndDate", txtEndDate.Text);   
             SqlMapperUtil.InsertUpdateOrDeleteStoredProc("UpdateTBDetailTBAuxJE", p, conStr);
-            MessageBox.Show("UpdateTBDetailTBAuxJE 完成！");
+            
         }
 
         private void InitTBFS(string conStr)
@@ -410,9 +462,7 @@ namespace XJY2EAS
             string execSQL = " truncate table  " + auxTable.TableName;
             SqlMapperUtil.CMDExcute(execSQL, null, conStr);
             SqlServerHelper.SqlBulkCopy(auxTable, conStr);
-
-            MessageBox.Show("TBAux初始化完成！");
-
+             
 
         }
 
@@ -508,7 +558,7 @@ namespace XJY2EAS
             var p = new DynamicParameters();
             p.Add("@ProjectID", dbName);
             SqlMapperUtil.InsertUpdateOrDeleteStoredProc("InitTbAccTable", p, conStr);
-            MessageBox.Show("TBDetail初始化完成！");
+            
         }
 
         private void InitFdetail(string conStr)
@@ -567,7 +617,7 @@ namespace XJY2EAS
             //string conStr2 = "server = 192.168.1.33; uid = sa; pwd = sa; database = Szmz; Max Pool Size=1200; ";
             //string sql2 = " Select * from AuxiliaryFDetail where ProjectID = 'AudSzmz_3_201812'  ";
             //dynamic d2 = SqlMapperUtil.SqlWithParams<dynamic>(sql2, null, conStr2);
-            MessageBox.Show("辅助核算对照表初始化完成！");
+        
         }
 
         private void InitVoucher(string conStr)
@@ -586,14 +636,16 @@ namespace XJY2EAS
 
             string expzk = " select 	Pzk_TableName	from	pzk	where	Pzk_TableName!='jzpz' and Pzk_TableName like 'jzpz%' ";
             dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(expzk, null, conStr);
+            string pzkname = "jzpz";
             foreach (var d in ds)
             {
-                jzpzSQL = jzpzSQL.Replace("from jzpz", "from "+d.Pzk_TableName).Replace("truncate table TBVoucher","");
+                jzpzSQL = jzpzSQL.Replace("from "+pzkname, "from "+d.Pzk_TableName).Replace("truncate table TBVoucher","");
                 SqlMapperUtil.CMDExcute(jzpzSQL, null, conStr);
+                pzkname = d.Pzk_TableName;
             }
             string updatesql = " update v set v.fllx = case when a.Syjz = 0 then 1 else a.Syjz end   from dbo.tbvoucher v     join ACCOUNT a on a.AccountCode = v.AccountCode  ";
             SqlMapperUtil.CMDExcute(updatesql, null, conStr);
-            MessageBox.Show("凭证表初始化完成！");
+            
         }
  
 
@@ -646,7 +698,7 @@ namespace XJY2EAS
             string execSQL = " truncate table ACCOUNT ";
             SqlMapperUtil.CMDExcute(execSQL, null, conStr);
             SqlServerHelper.SqlBulkCopy(accountTable, conStr);
-            MessageBox.Show("科目表初始化完成！");
+           
         }
 
         private void BuildTypeCode(DataTable accountTable,string conStr)
@@ -723,7 +775,7 @@ namespace XJY2EAS
                 " ; update  PROJECTTYPE set TypeCode=LTRIM(rtrim(TypeCode))   ";
             SqlMapperUtil.CMDExcute(projecttypesql, null, conStr);
 
-            MessageBox.Show("项目初始化完成！");
+           
         }
 
 
