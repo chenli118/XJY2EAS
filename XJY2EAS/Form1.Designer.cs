@@ -31,7 +31,7 @@
             this.button1 = new System.Windows.Forms.Button();
             this.button2 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
-            this.radialMenuItem1 = new C1.Win.C1Command.RadialMenuItem();
+           
             this.button4 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
             this.button6 = new System.Windows.Forms.Button();
@@ -77,12 +77,7 @@
             this.button3.Text = "处理第一个辅助核算项目";
             this.button3.UseVisualStyleBackColor = true;
             this.button3.Click += new System.EventHandler(this.Button3_Click);
-            // 
-            // radialMenuItem1
-            // 
-            this.radialMenuItem1.Name = "radialMenuItem1";
-            this.radialMenuItem1.Text = "test1";
-            this.radialMenuItem1.ToolTip = "test1";
+         
             // 
             // button4
             // 
@@ -173,7 +168,8 @@
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(9, 413);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(0, 18);
+            this.label3.Size = new System.Drawing.Size(0, 12);
+            
             this.label3.TabIndex = 15;
             // 
             // Form1
@@ -206,8 +202,7 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Button button3;
-        private System.Windows.Forms.Button button4;
-        private C1.Win.C1Command.RadialMenuItem radialMenuItem1;
+        private System.Windows.Forms.Button button4;       
         private System.Windows.Forms.TextBox txtBeginDate;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox txtCustomerCode;

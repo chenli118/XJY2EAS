@@ -387,6 +387,7 @@ namespace XJY2EAS
         }
         private void Button2_Click(object sender, EventArgs e)
         {
+
             InitAccount(conStr);
             InitVoucher(conStr);
             MessageBox.Show("转换凭证库成功!");

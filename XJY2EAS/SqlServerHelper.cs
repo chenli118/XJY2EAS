@@ -51,7 +51,7 @@ namespace XJY2EAS
                 }
                 catch (Exception Err)
                 {
-
+                    throw Err;
                 }
                 
                 }
