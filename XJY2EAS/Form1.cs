@@ -39,6 +39,7 @@ namespace XJY2EAS
 
         private void BackgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
         {
+            
             backgroundWorker1.ReportProgress(1, "开始初始化数据库...");
             DBInit();
             backgroundWorker1.ReportProgress(5, "初始化数据库完毕!");
@@ -53,6 +54,7 @@ namespace XJY2EAS
             backgroundWorker1.ReportProgress(38, "凭证表数据加载完毕!");
             backgroundWorker1.ReportProgress(38, "开始更新期间范围...");
             GetPeriod(conStr);
+
             backgroundWorker1.ReportProgress(39, "更新期间范围完成!");
             backgroundWorker1.ReportProgress(39, "开始装入业务循环报表数据...");
             InitTBFS(conStr);
@@ -63,12 +65,33 @@ namespace XJY2EAS
             backgroundWorker1.ReportProgress(45, "开始装入AuxiliaryFDetail数据...");
             InitFdetail(conStr);
             backgroundWorker1.ReportProgress(55, "AuxiliaryFDetail数据加载完成！");
+            Thread.Sleep(1000);
             backgroundWorker1.ReportProgress(55, "开始装入TBAux数据...");
             InitTBAux(conStr);
             backgroundWorker1.ReportProgress(60, "TBAux数据加载完成！");
+            //AutomaticProcessingForUpdateProject  处理project jb
+            //ProcessKmdm_jdToKmdm  处理 tbvoucher的 accountcode 当 km表 的 kmdm != kmdm_jd 时
+            //BulkImportLocalPeriodData  临时表转正式表 
+          
+            //UPDATEVoucherFllx
+            //InitTbAccTable
+            //ByContinueDateUpdateTBAcc
+            //InitVoucherProjectCode
+            //UpdateVoucherProjectCode
+            //InitTbAuxTable
+            //ByFllxUpdateTbAccAndTbAux
+            //ByTBAuxUpdateTbDetailJFJEDFJE
+            //ByFllxUpdateTbAccAndTbAuxQqccgz
+           
+
             backgroundWorker1.ReportProgress(65, "开始更新Tbdetail、TBAux...");
-            UpdateTBDetailAndTBAux(conStr);
+           // UpdateTBDetailAndTBAux(conStr);
             backgroundWorker1.ReportProgress(100, "更新Tbdetail、TBAux完成！");
+            //SynchroTbDetailAndVoucherTable
+            //UpdateVoucherProjectCode
+            //UpdateTbDetailISMXISAUXISACCMX
+            //UpdateTBfsandTBaccbyTBGrouping
+             
         }
 
         private void BackgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -140,7 +163,9 @@ namespace XJY2EAS
         }
         private void DBInit()
         {         
-            string[] files = System.IO.Directory.GetFiles(thirdDataFiles);
+            string[] files =    Directory.GetFiles(thirdDataFiles, "*.*",
+                        SearchOption.AllDirectories).Where(s => s != null && (s.EndsWith(".db")
+                            || s.EndsWith(".ini"))).ToArray();
             //过滤需要导入的db文件
             #region 001ToDb
             var dbFiles = files.Where(p => Importfiles.Exists(s =>
@@ -341,8 +366,9 @@ namespace XJY2EAS
                         this.txtEndDate.Invoke(new Action<string>((str) => { txtEndDate.Text = str; }), endDateStr);
                     }
                 }
-
             }
+            string execSQL = " DELETE FROM TBVoucher  where date > '"+txtEndDate.Text.Trim() +"' ";
+            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
 
         }
 
@@ -440,7 +466,7 @@ namespace XJY2EAS
             auxTable.Columns.Add("jfje", typeof(decimal));
             auxTable.Columns.Add("dfje", typeof(decimal));
             auxTable.Columns.Add("qmye", typeof(decimal));
-            string qsql = "select distinct idet.accountcode,idet.AuxiliaryCode, isnull(xm.xmmc,space(0)) as AuxiliaryName,xmye.ncye as Sqqmye  from AuxiliaryFDetail idet join  xm xm   on LTRIM(rtrim(xm.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS=idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS      join xmye xmye on idet.accountcode COLLATE Chinese_PRC_CS_AS_KS_WS = ltrim(rtrim(xmye.kmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS and idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS = LTRIM(rtrim(xmye.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS  ";
+            string qsql = "select distinct idet.accountcode,idet.AuxiliaryCode, isnull(xm.xmmc,space(0)) as AuxiliaryName,xmye.ncye as Sqqmye  from AuxiliaryFDetail idet with(nolock) join  xm xm   on LTRIM(rtrim(xm.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS=idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS      join xmye xmye on idet.accountcode COLLATE Chinese_PRC_CS_AS_KS_WS = ltrim(rtrim(xmye.kmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS and idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS = LTRIM(rtrim(xmye.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS  ";
             dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
             foreach (var vd in ds)
             {
@@ -459,6 +485,11 @@ namespace XJY2EAS
                 dr["dfje"] = 0M;
                 dr["qmye"] = 0M;
                 auxTable.Rows.Add(dr);
+            }
+            if (auxTable.Rows.Count == 0)
+            {
+                MessageBox.Show("没有TBAux数据");
+                return;
             }
             string execSQL = " truncate table  " + auxTable.TableName;
             SqlMapperUtil.CMDExcute(execSQL, null, conStr);
@@ -615,9 +646,7 @@ namespace XJY2EAS
             string execSQL = " truncate table  "+ auxfdetail.TableName;
             SqlMapperUtil.CMDExcute(execSQL, null, conStr);
             SqlServerHelper.SqlBulkCopy(auxfdetail, conStr);
-            //string conStr2 = "server = 192.168.1.33; uid = sa; pwd = sa; database = Szmz; Max Pool Size=1200; ";
-            //string sql2 = " Select * from AuxiliaryFDetail where ProjectID = 'AudSzmz_3_201812'  ";
-            //dynamic d2 = SqlMapperUtil.SqlWithParams<dynamic>(sql2, null, conStr2);
+           
         
         }
 
@@ -625,14 +654,14 @@ namespace XJY2EAS
         {
 
             string jzpzSQL = " truncate table TBVoucher" +
-                " insert  TBVoucher(VoucherID,Clientid,ProjectID,IncNo,Date,Period,Pzh,Djh,AccountCode,Zy,Jfje,Dfje,jfsl,jd,dfsl, ZDR,dfkm,Wbdm,Wbje,Hl,fsje,fllx,FDetailID) ";
-            jzpzSQL += "select  newid() as VoucherID,'" + clientID + "' as clientID, '" + dbName + "' as ProjectID,IncNo, Pz_Date as [date],Kjqj as Period ,Pzh,Djh,Kmdm as AccountCode ," +
+                " insert  TBVoucher(VoucherID,Clientid,ProjectID,IncNo,Date,Period,Pzh,Djh,AccountCode,Zy,Jfje,Dfje,jfsl,fsje,jd,dfsl, ZDR,dfkm,Wbdm,Wbje,Hl,fllx,FDetailID) ";
+            jzpzSQL += "select  newid() as VoucherID,'" + clientID + "' as clientID, '" + dbName + "' as ProjectID,IncNo, Pz_Date as [date],Kjqj as Period ,Pzh,fjzs as Djh,Kmdm as AccountCode ," +
                " zy,case when jd = '借' then rmb else 0 end as jfje,  " +
                " case when jd = '贷' then rmb else 0 end as dfje,  " +
                " case when jd = '借' then isnull(sl,0)  else 0 end as jfsl,  " +
-               //" case when jd = '借' and rmb>0	then 1 else -1 end *(Jfje+Dfje) as fsje," +
+               " case when jd = '借' and rmb>0	then 1 else -1 end *(rmb) as fsje," +
                " case when jd = '借' and rmb>0	then 1 else -1 end	as jd, " +
-               " case when jd = '贷' then isnull(sl,0)  else 0 end as dfsl,  sr as ZDR, DFKM,Wbdm,Wbje,isnull(Hl,0) as Hl, 0 AS fsje, 1 as fllx, FDetailID from jzpz ";
+               " case when jd = '贷' then isnull(sl,0)  else 0 end as dfsl,  sr as ZDR, DFKM,Wbdm,Wbje,isnull(Hl,0) as Hl,  1 as fllx, FDetailID from jzpz ";
             SqlMapperUtil.CMDExcute(jzpzSQL, null, conStr);
 
             string expzk = " select 	Pzk_TableName	from	pzk	where	Pzk_TableName!='jzpz' and Pzk_TableName like 'jzpz%' ";
@@ -644,6 +673,10 @@ namespace XJY2EAS
                 SqlMapperUtil.CMDExcute(jzpzSQL, null, conStr);
                 pzkname = d.Pzk_TableName;
             }
+            string incNoSql = ";with t1 as( select ROW_NUMBER() OVER (ORDER BY period) AS RowNumber,	period,pzh from TBVoucher group by period,pzh	having  COUNT(period)>1 AND count(pzh)>1)" +
+               "   update vv set vv.IncNo = v.RowNumber  from TBVoucher vv  ,	t1 v    where vv.period = v.period and vv.pzh = v.pzh; ";
+            SqlMapperUtil.CMDExcute(incNoSql, null, conStr);
+
             string updatesql = " update v set v.fllx = case when a.Syjz = 0 then 1 else a.Syjz end   from dbo.tbvoucher v     join ACCOUNT a on a.AccountCode = v.AccountCode  ";
             SqlMapperUtil.CMDExcute(updatesql, null, conStr);
             
@@ -659,7 +692,7 @@ namespace XJY2EAS
             accountTable.Columns.Add("UpperCode");
             accountTable.Columns.Add("AccountName");
             //accountTable.Columns.Add("Attribute",typeof(int));
-            //accountTable.Columns.Add("Jd", typeof(int));
+            accountTable.Columns.Add("Jd", typeof(int));
             accountTable.Columns.Add("Hsxms", typeof(int));
             accountTable.Columns.Add("TypeCode");
             accountTable.Columns.Add("Jb", typeof(int));
@@ -681,7 +714,7 @@ namespace XJY2EAS
                 dr["UpperCode"] ="";
                 dr["AccountName"] = vd.kmmc;
                 //dr["Attribute"] = vd.KM_TYPE == "损益" ? 1 : 0;
-                //dr["Jd"] = vd.KM_YEFX;
+                dr["Jd"] = 1;//default(1)
                 dr["Hsxms"] = 0;
                 dr["TypeCode"] = "";
                 dr["Jb"] = vd.Kmjb;
@@ -699,6 +732,7 @@ namespace XJY2EAS
             string execSQL = " truncate table ACCOUNT ";
             SqlMapperUtil.CMDExcute(execSQL, null, conStr);
             SqlServerHelper.SqlBulkCopy(accountTable, conStr);
+
            
         }
 
@@ -771,7 +805,9 @@ namespace XJY2EAS
             string projectsql = " truncate table PROJECT  ; INSERT  PROJECT   SELECT Distinct '" + dbName + "', LEFT(XMDM, CHARINDEX('.', XMDM)),XMDM,isnull(XMMC,space(0)),NULL,XMJB,XMMX     FROM XM " +
                 " ; update PROJECT set ProjectCode=LTRIM(rtrim(ProjectCode)),TypeCode=LTRIM(rtrim(TypeCode))  ";
             SqlMapperUtil.CMDExcute(projectsql, null, conStr);
-             
+            string jbsql = "update  p1 set  p1.UPPERCODE = p2.PROJECTCODE  from ProJect p1 join ProJect p2 on p1.JB =p2.JB+1  and p1.TYPECODE = p2.TYPECODE   and  left(p1.PROJECTCODE,len(p2.PROJECTCODE)) = p2.PROJECTCODE and p1.jb>1 ";
+            SqlMapperUtil.CMDExcute(jbsql, null, conStr);
+
             string projecttypesql = " truncate table ProjectType  ; INSERT  ProjectType  SELECT   '" + dbName + "', FITEMID,FName FROM t_itemclass" +
                 " ; update  PROJECTTYPE set TypeCode=LTRIM(rtrim(TypeCode))   ";
             SqlMapperUtil.CMDExcute(projecttypesql, null, conStr);

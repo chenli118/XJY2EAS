@@ -14,21 +14,23 @@ namespace XJY2EAS
         {
             using (SqlConnection connection = new SqlConnection(conStr))
             {
-                using (SqlBulkCopy copy = new SqlBulkCopy(connection))
+                connection.Open();
+                using (var tran = connection.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    copy.DestinationTableName = dt.TableName;
-
-                    foreach (DataColumn column in dt.Columns)
+                    using (SqlBulkCopy copy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, tran))
                     {
-                        copy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(column.ColumnName, column.ColumnName));
+                        copy.DestinationTableName = dt.TableName;
+
+                        foreach (DataColumn column in dt.Columns)
+                        {
+                            copy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(column.ColumnName, column.ColumnName));
+                        }                       
+                        copy.BulkCopyTimeout = 0;
+                        await copy.WriteToServerAsync(dt);
+                        tran.Commit();
+                        connection.Close();
                     }
-
-                    connection.Open();
-                    copy.BulkCopyTimeout = 0;
-                    await copy.WriteToServerAsync(dt);
-                    connection.Close();
                 }
-
             }
 
         }

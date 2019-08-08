@@ -169,7 +169,7 @@
             this.label3.Location = new System.Drawing.Point(9, 413);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(0, 12);
-            
+            this.label3.Font = new System.Drawing.Font("宋体", 7f, System.Drawing.FontStyle.Italic);
             this.label3.TabIndex = 15;
             // 
             // Form1
