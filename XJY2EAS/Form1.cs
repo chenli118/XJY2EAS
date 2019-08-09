@@ -51,41 +51,29 @@ namespace XJY2EAS
             backgroundWorker1.ReportProgress(8, "科目表数据加载完毕!");
             backgroundWorker1.ReportProgress(8, "开始装入凭证表数据...");
             InitVoucher(conStr);
+            //AutomaticProcessingForUpdateProject  处理project jb
+            //ProcessKmdm_jdToKmdm  处理 tbvoucher的 accountcode 当 km表 的 kmdm != kmdm_jd 时
+            //BulkImportLocalPeriodData  临时表转正式表           
+            //UPDATEVoucherFllx
             backgroundWorker1.ReportProgress(38, "凭证表数据加载完毕!");
             backgroundWorker1.ReportProgress(38, "开始更新期间范围...");
             GetPeriod(conStr);
-
             backgroundWorker1.ReportProgress(39, "更新期间范围完成!");
-            backgroundWorker1.ReportProgress(39, "开始装入业务循环报表数据...");
-            InitTBFS(conStr);
-            backgroundWorker1.ReportProgress(40, "业务循环报表数据加载完成！");
-            backgroundWorker1.ReportProgress(40, "开始装入TBDetail数据...");
-            InitTbDetail(conStr);
-            backgroundWorker1.ReportProgress(45, "TBDetail数据加载完成！");
-            backgroundWorker1.ReportProgress(45, "开始装入AuxiliaryFDetail数据...");
+            backgroundWorker1.ReportProgress(39, "开始装入AuxiliaryFDetail数据...");
             InitFdetail(conStr);
-            backgroundWorker1.ReportProgress(55, "AuxiliaryFDetail数据加载完成！");
+            backgroundWorker1.ReportProgress(45, "AuxiliaryFDetail数据加载完成！");
             Thread.Sleep(1000);
-            backgroundWorker1.ReportProgress(55, "开始装入TBAux数据...");
+            backgroundWorker1.ReportProgress(45, "开始装入TBAux数据...");
             InitTBAux(conStr);
-            backgroundWorker1.ReportProgress(60, "TBAux数据加载完成！");
-            //AutomaticProcessingForUpdateProject  处理project jb
-            //ProcessKmdm_jdToKmdm  处理 tbvoucher的 accountcode 当 km表 的 kmdm != kmdm_jd 时
-            //BulkImportLocalPeriodData  临时表转正式表 
-          
-            //UPDATEVoucherFllx
-            //InitTbAccTable
-            //ByContinueDateUpdateTBAcc
-            //InitVoucherProjectCode
-            //UpdateVoucherProjectCode
-            //InitTbAuxTable
-            //ByFllxUpdateTbAccAndTbAux
-            //ByTBAuxUpdateTbDetailJFJEDFJE
-            //ByFllxUpdateTbAccAndTbAuxQqccgz
-           
-
+            backgroundWorker1.ReportProgress(50, "TBAux数据加载完成！");
+            backgroundWorker1.ReportProgress(50, "开始装入业务循环报表数据...");
+            InitTBFS(conStr);
+            backgroundWorker1.ReportProgress(52, "业务循环报表数据加载完成！");
+            backgroundWorker1.ReportProgress(52, "开始装入TBDetail数据...");
+            InitTbDetail(conStr); //InitTbAccTable  //ByContinueDateUpdateTBAcc
+            backgroundWorker1.ReportProgress(55, "TBDetail数据加载完成！");             
             backgroundWorker1.ReportProgress(65, "开始更新Tbdetail、TBAux...");
-           // UpdateTBDetailAndTBAux(conStr);
+            UpdateTBDetailAndTBAux(conStr); //InitTbAuxTable  //ByFllxUpdateTbAccAndTbAux  //ByTBAuxUpdateTbDetailJFJEDFJE  //ByFllxUpdateTbAccAndTbAuxQqccgz( update tbdetail.Qqccgz )
             backgroundWorker1.ReportProgress(100, "更新Tbdetail、TBAux完成！");
             //SynchroTbDetailAndVoucherTable
             //UpdateVoucherProjectCode
@@ -445,7 +433,8 @@ namespace XJY2EAS
 
         private void InitTBFS(string conStr)
         {
-            string execSQL = "Insert TBFS  SELECT * FROM Pack_TBFS  where projectid='audCas'";
+            string execSQL = "Insert TBFS  SELECT * FROM Pack_TBFS  where projectid='audCas' \n\r update TBFS set projectid='"+dbName+"'";
+
             SqlMapperUtil.CMDExcute(execSQL, null, conStr);
         }
 

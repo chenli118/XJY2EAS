@@ -8,7 +8,7 @@ b.FSCode,b.kmsx,b.Yefx,b.Tbtype
 INTO #typcode 
  FROM ACCOUNT a 
  INNER JOIN  TBDetail b
- ON  a.AccountCode=b.AccountCode
+ ON  a.AccountCode=b.AccountCode 
  WHERE a.Hsxms>0	AND a.TypeCode!='' and b.DataType=0 and b.IsAux =0
 
 
@@ -28,7 +28,7 @@ delete t1 from dbo.TBDetail t1
 	join a1 o 		on  o.AccountCode = t1.AccountCode 				and o.AuxiliaryCode = t1.AuxiliaryCode 	and o.FSCode = t1.FSCode  	and t1.DataType = 0
 
 
-insert dbo.TBDetail(ID,ProjectID,FSCode,AccountCode, AuxiliaryCode, AccAuxName, 		DataType, TBGrouping, TBType, IsMx, IsAccMx, IsAux, kmsx, Yefx, Sqqmye, jfje, dfje,SourceFSCode)  
+insert dbo.TBDetail(ID,ProjectID,FSCode,AccountCode, AuxiliaryCode, AccAuxName, DataType, TBGrouping, TBType, IsMx, IsAccMx, IsAux, kmsx, Yefx, Sqqmye, jfje, dfje,SourceFSCode)  
 
  select newid(), ProjectID,FSCode,AccountCode, AuxiliaryCode, AccAuxName, 		0 as DataType, AccountCode, TBType, 1, 0, 1, kmsx, Yefx, Sqqmye, jfje, dfje,'' 
 
