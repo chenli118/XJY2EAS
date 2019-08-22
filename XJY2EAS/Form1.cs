@@ -20,6 +20,7 @@ namespace XJY2EAS
 {
     public partial class Form1 : Form
     {
+        bool stepRet = true;
         private string dbName = string.Empty;        
         private string clientID = string.Empty;
         private string auditYear = string.Empty;
@@ -39,41 +40,52 @@ namespace XJY2EAS
 
         private void BackgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
         {
+         
             
             backgroundWorker1.ReportProgress(1, "开始初始化数据库...");
-            DBInit();
+            stepRet= DBInit();
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(5, "初始化数据库完毕!");
             backgroundWorker1.ReportProgress(5, "开始装入项目表数据...");
-            InitProject(conStr);
+            stepRet= InitProject(conStr);
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(6, "项目表数据加载完毕!");
             backgroundWorker1.ReportProgress(6, "开始装入科目表数据...");
-            InitAccount(conStr);
+            stepRet = InitAccount(conStr);
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(8, "科目表数据加载完毕!");
             backgroundWorker1.ReportProgress(8, "开始装入凭证表数据...");
-            InitVoucher(conStr);
+            stepRet= InitVoucher(conStr);
+            if (!stepRet) return;
             //AutomaticProcessingForUpdateProject  处理project jb
             //ProcessKmdm_jdToKmdm  处理 tbvoucher的 accountcode 当 km表 的 kmdm != kmdm_jd 时
             //BulkImportLocalPeriodData  临时表转正式表           
             //UPDATEVoucherFllx
             backgroundWorker1.ReportProgress(38, "凭证表数据加载完毕!");
             backgroundWorker1.ReportProgress(38, "开始更新期间范围...");
-            GetPeriod(conStr);
+            stepRet= GetPeriod(conStr);
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(39, "更新期间范围完成!");
             backgroundWorker1.ReportProgress(39, "开始装入AuxiliaryFDetail数据...");
-            InitFdetail(conStr);
+            stepRet =InitFdetail(conStr);
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(45, "AuxiliaryFDetail数据加载完成！");
             Thread.Sleep(1000);
             backgroundWorker1.ReportProgress(45, "开始装入TBAux数据...");
-            InitTBAux(conStr);
+            stepRet = InitTBAux(conStr);
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(50, "TBAux数据加载完成！");
             backgroundWorker1.ReportProgress(50, "开始装入业务循环报表数据...");
-            InitTBFS(conStr);
+            stepRet = InitTBFS(conStr);
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(52, "业务循环报表数据加载完成！");
             backgroundWorker1.ReportProgress(52, "开始装入TBDetail数据...");
-            InitTbDetail(conStr); //InitTbAccTable  //ByContinueDateUpdateTBAcc
+            stepRet = InitTbDetail(conStr); //InitTbAccTable  //ByContinueDateUpdateTBAcc
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(55, "TBDetail数据加载完成！");             
             backgroundWorker1.ReportProgress(65, "开始更新Tbdetail、TBAux...");
-            UpdateTBDetailAndTBAux(conStr); //InitTbAuxTable  //ByFllxUpdateTbAccAndTbAux  //ByTBAuxUpdateTbDetailJFJEDFJE  //ByFllxUpdateTbAccAndTbAuxQqccgz( update tbdetail.Qqccgz )
+            stepRet = UpdateTBDetailAndTBAux(conStr); //InitTbAuxTable  //ByFllxUpdateTbAccAndTbAux  //ByTBAuxUpdateTbDetailJFJEDFJE  //ByFllxUpdateTbAccAndTbAuxQqccgz( update tbdetail.Qqccgz )
+            if (!stepRet) return;
             backgroundWorker1.ReportProgress(100, "更新Tbdetail、TBAux完成！");
             //SynchroTbDetailAndVoucherTable
             //UpdateVoucherProjectCode
@@ -147,34 +159,41 @@ namespace XJY2EAS
             progressBar1.Value = 0;
             backgroundWorker1.RunWorkerAsync();
 
-
         }
-        private void DBInit()
-        {         
-            string[] files =    Directory.GetFiles(thirdDataFiles, "*.*",
-                        SearchOption.AllDirectories).Where(s => s != null && (s.EndsWith(".db")
-                            || s.EndsWith(".ini"))).ToArray();
-            //过滤需要导入的db文件
-            #region 001ToDb
-            var dbFiles = files.Where(p => Importfiles.Exists(s =>
-                s == Path.GetFileNameWithoutExtension(p).ToLower()
-                || (Path.GetFileNameWithoutExtension(p).ToLower() != "jzpz" &&
-                    Path.GetFileNameWithoutExtension(p).ToLower().IndexOf("jzpz") > -1)));
-            if (dbFiles.Count() == 0) { MessageBox.Show("没有发现数据文件！");return; }
-            InitDataBase(dbName);
-            Array.ForEach(dbFiles.ToArray(), (string dbfile) =>
+        private bool DBInit()
+        {
+            try
             {
-                PD2SqlDB(dbfile, dbName);
+                string[] files = Directory.GetFiles(thirdDataFiles, "*.*",
+                            SearchOption.AllDirectories).Where(s => s != null && (s.EndsWith(".db")
+                                || s.EndsWith(".ini"))).ToArray();
+                //过滤需要导入的db文件
+                #region 001ToDb
+                var dbFiles = files.Where(p => Importfiles.Exists(s =>
+                    s == Path.GetFileNameWithoutExtension(p).ToLower()
+                    || (Path.GetFileNameWithoutExtension(p).ToLower() != "jzpz" &&
+                        Path.GetFileNameWithoutExtension(p).ToLower().IndexOf("jzpz") > -1)));
+                if (dbFiles.Count() == 0) { MessageBox.Show("没有发现数据文件！"); return false; }
+                InitDataBase(dbName);
+                Array.ForEach(dbFiles.ToArray(), (string dbfile) =>
+                {
+                    PD2SqlDB(dbfile, dbName);
 
-                //else if (importType != 0 &&
-                //         tables.Count(x => dbfile.ToLower().IndexOf(x) > -1) > 0)
-                //{
-                //    importTxtTable(dbname, dbfile);
-                //}
-            });
+                    //else if (importType != 0 &&
+                    //         tables.Count(x => dbfile.ToLower().IndexOf(x) > -1) > 0)
+                    //{
+                    //    importTxtTable(dbname, dbfile);
+                    //}
+                });
 
-            #endregion
-           
+                #endregion
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
             
         }
         private string[] UnZipFile(string filepath,string targetDirectory)
@@ -314,50 +333,58 @@ namespace XJY2EAS
 
         }
         
-        private void GetPeriod(string conStr)
+        private bool GetPeriod(string conStr)
         {
-            Thread.CurrentThread.CurrentCulture = new CultureInfo("zh-CN", true)
+            try
             {
-                DateTimeFormat = { ShortDatePattern = "yyyy-MM-dd", FullDateTimePattern = "yyyy-MM-dd HH:mm:ss", LongTimePattern = "HH:mm:ss" }
-            };
-            string qStr = "select  max(date) ed,MIN(date) bd from TBVoucher";
-            dynamic pzdt = SqlMapperUtil.SqlWithParamsSingle<dynamic>(qStr, null, conStr);
-            foreach (var s in pzdt)
-            {
-                DateTime beginDate = DateTime.MinValue;
-                DateTime endDate = DateTime.MinValue;
-                if (DateTime.TryParse(pzdt.bd.ToString(), out beginDate) && DateTime.TryParse(pzdt.ed.ToString(), out endDate))
+                Thread.CurrentThread.CurrentCulture = new CultureInfo("zh-CN", true)
                 {
-                    if (beginDate != DateTime.MinValue && endDate != DateTime.MinValue)
+                    DateTimeFormat = { ShortDatePattern = "yyyy-MM-dd", FullDateTimePattern = "yyyy-MM-dd HH:mm:ss", LongTimePattern = "HH:mm:ss" }
+                };
+                string qStr = "select  max(date) ed,MIN(date) bd from TBVoucher";
+                dynamic pzdt = SqlMapperUtil.SqlWithParamsSingle<dynamic>(qStr, null, conStr);
+                foreach (var s in pzdt)
+                {
+                    DateTime beginDate = DateTime.MinValue;
+                    DateTime endDate = DateTime.MinValue;
+                    if (DateTime.TryParse(pzdt.bd.ToString(), out beginDate) && DateTime.TryParse(pzdt.ed.ToString(), out endDate))
                     {
-                        this.txtBeginDate.Invoke(new Action<string>((str) => { txtBeginDate.Text = str; }), beginDate.ToShortDateString());
-                        string endDateStr = endDate.ToShortDateString();
-                        switch (endDate.Month / 3)
+                        if (beginDate != DateTime.MinValue && endDate != DateTime.MinValue)
                         {
-                            case 0:
-                                endDateStr = endDate.ToShortDateString();
-                                break;
-                            case 1:
-                                endDateStr = endDate.Year + "-03-31";
-                                break;
-                            case 2:
-                                endDateStr = endDate.Year + "-06-30";
-                                break;
-                            case 3:
-                                endDateStr = endDate.Year + "-09-30";
-                                break;
-                            case 4:
-                                endDateStr = endDate.Year + "-12-31";
-                                break;
+                            this.txtBeginDate.Invoke(new Action<string>((str) => { txtBeginDate.Text = str; }), beginDate.ToShortDateString());
+                            string endDateStr = endDate.ToShortDateString();
+                            switch (endDate.Month / 3)
+                            {
+                                case 0:
+                                    endDateStr = endDate.ToShortDateString();
+                                    break;
+                                case 1:
+                                    endDateStr = endDate.Year + "-03-31";
+                                    break;
+                                case 2:
+                                    endDateStr = endDate.Year + "-06-30";
+                                    break;
+                                case 3:
+                                    endDateStr = endDate.Year + "-09-30";
+                                    break;
+                                case 4:
+                                    endDateStr = endDate.Year + "-12-31";
+                                    break;
 
+                            }
+                            this.txtEndDate.Invoke(new Action<string>((str) => { txtEndDate.Text = str; }), endDateStr);
                         }
-                        this.txtEndDate.Invoke(new Action<string>((str) => { txtEndDate.Text = str; }), endDateStr);
                     }
                 }
+                string execSQL = " DELETE FROM TBVoucher  where date > '" + txtEndDate.Text.Trim() + "' ";
+                SqlMapperUtil.CMDExcute(execSQL, null, conStr);
             }
-            string execSQL = " DELETE FROM TBVoucher  where date > '"+txtEndDate.Text.Trim() +"' ";
-            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
-
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
         }
 
         private void  GetCustomerInfo()
@@ -423,67 +450,93 @@ namespace XJY2EAS
             MessageBox.Show("处理成功！");
         }
 
-        private void UpdateTBDetailAndTBAux(string conStr)
-        { 
-            var p = new DynamicParameters();
-            p.Add("@pzEndDate", txtEndDate.Text);   
-            SqlMapperUtil.InsertUpdateOrDeleteStoredProc("UpdateTBDetailTBAuxJE", p, conStr);
-            
+        private bool UpdateTBDetailAndTBAux(string conStr)
+        {
+            try
+            {
+                var p = new DynamicParameters();
+                p.Add("@pzEndDate", txtEndDate.Text);
+                SqlMapperUtil.InsertUpdateOrDeleteStoredProc("UpdateTBDetailTBAuxJE", p, conStr);
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
         }
 
-        private void InitTBFS(string conStr)
+        private bool InitTBFS(string conStr)
         {
-            string execSQL = "Insert TBFS  SELECT * FROM Pack_TBFS  where projectid='audCas' \n\r update TBFS set projectid='"+dbName+"'";
-
-            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+            try
+            {
+                string execSQL = "Insert TBFS  SELECT * FROM Pack_TBFS  where projectid='audCas' \n\r update TBFS set projectid='" + dbName + "'";
+                SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
         }
 
-        private void InitTBAux(string conStr)
+        private bool InitTBAux(string conStr)
         {
-            DataTable auxTable = new DataTable();
-            auxTable.TableName = "TBAux";
-            auxTable.Columns.Add("ProjectID");
-            auxTable.Columns.Add("AccountCode");
-            auxTable.Columns.Add("AuxiliaryCode");
-            auxTable.Columns.Add("AuxiliaryName");
-            auxTable.Columns.Add("FSCode");
-            auxTable.Columns.Add("kmsx");
-            auxTable.Columns.Add("YEFX", typeof(int));
-            auxTable.Columns.Add("TBGrouping");
-            auxTable.Columns.Add("Sqqmye", typeof(decimal));
-            auxTable.Columns.Add("Qqccgz", typeof(decimal));
-            auxTable.Columns.Add("jfje", typeof(decimal));
-            auxTable.Columns.Add("dfje", typeof(decimal));
-            auxTable.Columns.Add("qmye", typeof(decimal));
-            string qsql = "select distinct idet.accountcode,idet.AuxiliaryCode, isnull(xm.xmmc,space(0)) as AuxiliaryName,xmye.ncye as Sqqmye  from AuxiliaryFDetail idet with(nolock) join  xm xm   on LTRIM(rtrim(xm.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS=idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS      join xmye xmye on idet.accountcode COLLATE Chinese_PRC_CS_AS_KS_WS = ltrim(rtrim(xmye.kmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS and idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS = LTRIM(rtrim(xmye.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS  ";
-            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
-            foreach (var vd in ds)
+            try
             {
-                DataRow dr = auxTable.NewRow();
-                dr["ProjectID"] = dbName;
-                dr["AccountCode"] = vd.accountcode;
-                dr["AuxiliaryCode"] = vd.AuxiliaryCode;
-                dr["AuxiliaryName"] = vd.AuxiliaryName;
-                dr["FSCode"] = string.Empty;
-                dr["kmsx"] = 0;
-                dr["YEFX"] = 0;
-                dr["TBGrouping"] = vd.accountcode;
-                dr["Sqqmye"] = vd.Sqqmye==null?0M:vd.Sqqmye;
-                dr["Qqccgz"] = 0M;
-                dr["jfje"] = 0M;
-                dr["dfje"] = 0M;
-                dr["qmye"] = 0M;
-                auxTable.Rows.Add(dr);
+                DataTable auxTable = new DataTable();
+                auxTable.TableName = "TBAux";
+                auxTable.Columns.Add("ProjectID");
+                auxTable.Columns.Add("AccountCode");
+                auxTable.Columns.Add("AuxiliaryCode");
+                auxTable.Columns.Add("AuxiliaryName");
+                auxTable.Columns.Add("FSCode");
+                auxTable.Columns.Add("kmsx");
+                auxTable.Columns.Add("YEFX", typeof(int));
+                auxTable.Columns.Add("TBGrouping");
+                auxTable.Columns.Add("Sqqmye", typeof(decimal));
+                auxTable.Columns.Add("Qqccgz", typeof(decimal));
+                auxTable.Columns.Add("jfje", typeof(decimal));
+                auxTable.Columns.Add("dfje", typeof(decimal));
+                auxTable.Columns.Add("qmye", typeof(decimal));
+                string qsql = "select distinct idet.accountcode,idet.AuxiliaryCode, isnull(xm.xmmc,space(0)) as AuxiliaryName,xmye.ncye as Sqqmye  from AuxiliaryFDetail idet with(nolock) join  xm xm   on LTRIM(rtrim(xm.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS=idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS      join xmye xmye on idet.accountcode COLLATE Chinese_PRC_CS_AS_KS_WS = ltrim(rtrim(xmye.kmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS and idet.AuxiliaryCode COLLATE Chinese_PRC_CS_AS_KS_WS = LTRIM(rtrim(xmye.xmdm)) COLLATE Chinese_PRC_CS_AS_KS_WS  ";
+                dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
+                foreach (var vd in ds)
+                {
+                    DataRow dr = auxTable.NewRow();
+                    dr["ProjectID"] = dbName;
+                    dr["AccountCode"] = vd.accountcode;
+                    dr["AuxiliaryCode"] = vd.AuxiliaryCode;
+                    dr["AuxiliaryName"] = vd.AuxiliaryName;
+                    dr["FSCode"] = string.Empty;
+                    dr["kmsx"] = 0;
+                    dr["YEFX"] = 0;
+                    dr["TBGrouping"] = vd.accountcode;
+                    dr["Sqqmye"] = vd.Sqqmye == null ? 0M : vd.Sqqmye;
+                    dr["Qqccgz"] = 0M;
+                    dr["jfje"] = 0M;
+                    dr["dfje"] = 0M;
+                    dr["qmye"] = 0M;
+                    auxTable.Rows.Add(dr);
+                }
+                if (auxTable.Rows.Count == 0)
+                {
+                    MessageBox.Show("没有TBAux数据");
+                }
+                else
+                {
+                    string execSQL = " truncate table  " + auxTable.TableName;
+                    SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+                    SqlServerHelper.SqlBulkCopy(auxTable, conStr);
+                }
             }
-            if (auxTable.Rows.Count == 0)
+            catch (Exception err)
             {
-                MessageBox.Show("没有TBAux数据");
-                return;
+                MessageBox.Show(err.Message);
+                return false;
             }
-            string execSQL = " truncate table  " + auxTable.TableName;
-            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
-            SqlServerHelper.SqlBulkCopy(auxTable, conStr);
-             
+            return true;
 
         }
 
@@ -491,237 +544,270 @@ namespace XJY2EAS
         /// [InitTbAccTable] [ByContinueDateUpdateTBAcc]
         /// </summary>
         /// <param name="conStr"></param>
-        private void InitTbDetail(string conStr)
+        private bool InitTbDetail(string conStr)
         {
-            #region old
-            /*
-            DataTable dtDetail = new DataTable();
-            dtDetail.TableName = "TBDetail";
-            #region columns
-            dtDetail.Columns.Add("ID");
-            dtDetail.Columns.Add("ProjectID");
-            dtDetail.Columns.Add("FSCode");
-            dtDetail.Columns.Add("AccountCode");
-            dtDetail.Columns.Add("AuxiliaryCode");
-            dtDetail.Columns.Add("AccAuxName");
-            dtDetail.Columns.Add("DataType", typeof(int));
-            dtDetail.Columns.Add("TBGrouping");
-            dtDetail.Columns.Add("TBType", typeof(int));
-            dtDetail.Columns.Add("IsAccMx", typeof(int));
-            dtDetail.Columns.Add("IsMx", typeof(int));
-            dtDetail.Columns.Add("IsAux", typeof(int));
-            dtDetail.Columns.Add("kmsx");
-            dtDetail.Columns.Add("Yefx", typeof(int));
-            dtDetail.Columns.Add("SourceFSCode");
-            dtDetail.Columns.Add("Sqqmye", typeof(decimal));
-            dtDetail.Columns.Add("Qqccgz", typeof(decimal));
-            dtDetail.Columns.Add("jfje", typeof(decimal));
-            dtDetail.Columns.Add("dfje", typeof(decimal));
-            dtDetail.Columns.Add("CrjeJF", typeof(decimal));
-            dtDetail.Columns.Add("CrjeDF", typeof(decimal));
-            dtDetail.Columns.Add("AjeJF", typeof(decimal));
-            dtDetail.Columns.Add("AjeDF", typeof(decimal));
-            dtDetail.Columns.Add("RjeJF", typeof(decimal));
-            dtDetail.Columns.Add("RjeDF", typeof(decimal));
-            dtDetail.Columns.Add("TaxBase", typeof(decimal));
-            dtDetail.Columns.Add("PY1", typeof(decimal));
-            dtDetail.Columns.Add("jfje1", typeof(decimal));
-            dtDetail.Columns.Add("dfje1", typeof(decimal));
-            dtDetail.Columns.Add("jfje2", typeof(decimal));
-            dtDetail.Columns.Add("dfje2", typeof(decimal));
-            #endregion
-            string qsql = "select distinct NEWID() ID ,a.AccountCode,space(0) AS SourceFSCode," +
-                " a.AccountName as AccAuxName,a.jb as TBType,0 AS IsMx, a.UpperCode TBGrouping, a.Ncye AS Sqqmye,space(0) fscode,1 yefx,0 kmsx," +
-                "0 AS isAux,a.ismx AS isAccMx,0 AS DataType,Qqccgz,Hsxms,TypeCode from dbo.Account a with(nolock)   ";
-
-            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
-            foreach (var vd in ds)
+            try
             {
-                DataRow dr = dtDetail.NewRow();
-                dr["ID"] = vd.ID;
-                dr["ProjectID"]=dbName;
-                dr["FSCode"] = vd.fscode;
-                dr["AccountCode"] = vd.AccountCode;
-                dr["AuxiliaryCode"] = vd.TypeCode;
-                dr["AccAuxName"] = vd.AccAuxName;
-                dr["DataType"] = vd.DataType;
-                dr["TBGrouping"] = vd.TBGrouping;
-                dr["TBType"] = vd.TBType;
-                dr["IsAccMx"] = vd.isAccMx;
-                dr["IsMx"] = vd.IsMx;
-                dr["IsAux"] = 0;
-                dr["kmsx"] = vd.kmsx;
-                dr["Yefx"] = vd.yefx;
-                dr["SourceFSCode"] = vd.SourceFSCode;
-                dr["Sqqmye"] = vd.Sqqmye==null?0M:vd.Sqqmye;
-                dr["Qqccgz"] = vd.Qqccgz;
-                dr["jfje"] = 0M;
-                dr["dfje"] = 0M;
-                dr["CrjeJF"] = 0M;
-                dr["CrjeDF"] = 0M;
-                dr["AjeJF"] = 0M;
-                dr["AjeDF"] = 0M;
-                dr["RjeJF"] = 0M;
-                dr["RjeDF"] = 0M;
-                dr["TaxBase"] = 0M;
-                dr["PY1"] = 0M;
-                dr["jfje1"] = 0M;
-                dr["dfje1"] = 0M;
-                dr["jfje2"] = 0M;
-                dr["dfje2"] = 0M;
-                dtDetail.Rows.Add(dr);
+                #region old
+                /*
+                DataTable dtDetail = new DataTable();
+                dtDetail.TableName = "TBDetail";
+                #region columns
+                dtDetail.Columns.Add("ID");
+                dtDetail.Columns.Add("ProjectID");
+                dtDetail.Columns.Add("FSCode");
+                dtDetail.Columns.Add("AccountCode");
+                dtDetail.Columns.Add("AuxiliaryCode");
+                dtDetail.Columns.Add("AccAuxName");
+                dtDetail.Columns.Add("DataType", typeof(int));
+                dtDetail.Columns.Add("TBGrouping");
+                dtDetail.Columns.Add("TBType", typeof(int));
+                dtDetail.Columns.Add("IsAccMx", typeof(int));
+                dtDetail.Columns.Add("IsMx", typeof(int));
+                dtDetail.Columns.Add("IsAux", typeof(int));
+                dtDetail.Columns.Add("kmsx");
+                dtDetail.Columns.Add("Yefx", typeof(int));
+                dtDetail.Columns.Add("SourceFSCode");
+                dtDetail.Columns.Add("Sqqmye", typeof(decimal));
+                dtDetail.Columns.Add("Qqccgz", typeof(decimal));
+                dtDetail.Columns.Add("jfje", typeof(decimal));
+                dtDetail.Columns.Add("dfje", typeof(decimal));
+                dtDetail.Columns.Add("CrjeJF", typeof(decimal));
+                dtDetail.Columns.Add("CrjeDF", typeof(decimal));
+                dtDetail.Columns.Add("AjeJF", typeof(decimal));
+                dtDetail.Columns.Add("AjeDF", typeof(decimal));
+                dtDetail.Columns.Add("RjeJF", typeof(decimal));
+                dtDetail.Columns.Add("RjeDF", typeof(decimal));
+                dtDetail.Columns.Add("TaxBase", typeof(decimal));
+                dtDetail.Columns.Add("PY1", typeof(decimal));
+                dtDetail.Columns.Add("jfje1", typeof(decimal));
+                dtDetail.Columns.Add("dfje1", typeof(decimal));
+                dtDetail.Columns.Add("jfje2", typeof(decimal));
+                dtDetail.Columns.Add("dfje2", typeof(decimal));
+                #endregion
+                string qsql = "select distinct NEWID() ID ,a.AccountCode,space(0) AS SourceFSCode," +
+                    " a.AccountName as AccAuxName,a.jb as TBType,0 AS IsMx, a.UpperCode TBGrouping, a.Ncye AS Sqqmye,space(0) fscode,1 yefx,0 kmsx," +
+                    "0 AS isAux,a.ismx AS isAccMx,0 AS DataType,Qqccgz,Hsxms,TypeCode from dbo.Account a with(nolock)   ";
 
+                dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
+                foreach (var vd in ds)
+                {
+                    DataRow dr = dtDetail.NewRow();
+                    dr["ID"] = vd.ID;
+                    dr["ProjectID"]=dbName;
+                    dr["FSCode"] = vd.fscode;
+                    dr["AccountCode"] = vd.AccountCode;
+                    dr["AuxiliaryCode"] = vd.TypeCode;
+                    dr["AccAuxName"] = vd.AccAuxName;
+                    dr["DataType"] = vd.DataType;
+                    dr["TBGrouping"] = vd.TBGrouping;
+                    dr["TBType"] = vd.TBType;
+                    dr["IsAccMx"] = vd.isAccMx;
+                    dr["IsMx"] = vd.IsMx;
+                    dr["IsAux"] = 0;
+                    dr["kmsx"] = vd.kmsx;
+                    dr["Yefx"] = vd.yefx;
+                    dr["SourceFSCode"] = vd.SourceFSCode;
+                    dr["Sqqmye"] = vd.Sqqmye==null?0M:vd.Sqqmye;
+                    dr["Qqccgz"] = vd.Qqccgz;
+                    dr["jfje"] = 0M;
+                    dr["dfje"] = 0M;
+                    dr["CrjeJF"] = 0M;
+                    dr["CrjeDF"] = 0M;
+                    dr["AjeJF"] = 0M;
+                    dr["AjeDF"] = 0M;
+                    dr["RjeJF"] = 0M;
+                    dr["RjeDF"] = 0M;
+                    dr["TaxBase"] = 0M;
+                    dr["PY1"] = 0M;
+                    dr["jfje1"] = 0M;
+                    dr["dfje1"] = 0M;
+                    dr["jfje2"] = 0M;
+                    dr["dfje2"] = 0M;
+                    dtDetail.Rows.Add(dr);
+
+                }
+                string execSQL = " truncate table  " + dtDetail.TableName;
+                SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+                SqlServerHelper.SqlBulkCopy(dtDetail, conStr); */
+                #endregion
+                var p = new DynamicParameters();
+                p.Add("@ProjectID", dbName);
+                SqlMapperUtil.InsertUpdateOrDeleteStoredProc("InitTbAccTable", p, conStr);
             }
-            string execSQL = " truncate table  " + dtDetail.TableName;
-            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
-            SqlServerHelper.SqlBulkCopy(dtDetail, conStr); */
-            #endregion 
-            var p = new DynamicParameters();
-            p.Add("@ProjectID", dbName);
-            SqlMapperUtil.InsertUpdateOrDeleteStoredProc("InitTbAccTable", p, conStr);
-            
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
         }
 
-        private void InitFdetail(string conStr)
+        private bool InitFdetail(string conStr)
         {
-            DataTable auxfdetail = new DataTable();
-            auxfdetail.TableName = "AuxiliaryFDetail";
-            auxfdetail.Columns.Add("projectid");
-            auxfdetail.Columns.Add("Accountcode");
-            auxfdetail.Columns.Add("AuxiliaryCode");
-            auxfdetail.Columns.Add("Ncye", typeof(decimal));
-            auxfdetail.Columns.Add("Jfje1", typeof(decimal));
-            auxfdetail.Columns.Add("Dfje1", typeof(decimal));
-            auxfdetail.Columns.Add("FDetailID", typeof(int));
-            auxfdetail.Columns.Add("DataType", typeof(int));
-            auxfdetail.Columns.Add("DataYear", typeof(int)); 
-
-            string itemclass = "select * from t_itemclass";
-            var tab_ic = SqlMapperUtil.SqlWithParams<dynamic>(itemclass, null, conStr);
-            List<string> xmField = new List<string>();
-            foreach (var iid in tab_ic)
+            try
             {
-                xmField.Add("F" + iid.FItemClassID);
-            }
-            string sql1 = "select  * from t_itemdetail  t join t_fzye f on t.FDetailID = f.FDetailID  ";
-            var d1 = SqlMapperUtil.SqlWithParams<dynamic>(sql1, null, conStr);
-            foreach (var d in d1)
-            {
-                Array.ForEach(xmField.ToArray(), f => {
+                DataTable auxfdetail = new DataTable();
+                auxfdetail.TableName = "AuxiliaryFDetail";
+                auxfdetail.Columns.Add("projectid");
+                auxfdetail.Columns.Add("Accountcode");
+                auxfdetail.Columns.Add("AuxiliaryCode");
+                auxfdetail.Columns.Add("Ncye", typeof(decimal));
+                auxfdetail.Columns.Add("Jfje1", typeof(decimal));
+                auxfdetail.Columns.Add("Dfje1", typeof(decimal));
+                auxfdetail.Columns.Add("FDetailID", typeof(int));
+                auxfdetail.Columns.Add("DataType", typeof(int));
+                auxfdetail.Columns.Add("DataYear", typeof(int));
 
-                    foreach (var xv in d)
+                string itemclass = "select * from t_itemclass";
+                var tab_ic = SqlMapperUtil.SqlWithParams<dynamic>(itemclass, null, conStr);
+                List<string> xmField = new List<string>();
+                foreach (var iid in tab_ic)
+                {
+                    xmField.Add("F" + iid.FItemClassID);
+                }
+                string sql1 = "select  * from t_itemdetail  t join t_fzye f on t.FDetailID = f.FDetailID  ";
+                var d1 = SqlMapperUtil.SqlWithParams<dynamic>(sql1, null, conStr);
+                foreach (var d in d1)
+                {
+                    Array.ForEach(xmField.ToArray(), f =>
                     {
-                        if (xv.Key == f)
+
+                        foreach (var xv in d)
                         {
-                            if (!string.IsNullOrWhiteSpace(xv.Value))
+                            if (xv.Key == f)
                             {
-                                DataRow dr1 = auxfdetail.NewRow();
-                                dr1["projectid"] = dbName;
-                                dr1["Accountcode"] = d.Kmdm;
-                                dr1["AuxiliaryCode"] = xv.Value;                              
-                                dr1["Ncye"] = d.Ncye;
-                                dr1["Jfje1"] = d.Jfje1;
-                                dr1["Dfje1"] = d.Dfje1;
-                                dr1["FDetailID"] = d.FDetailID;
-                                dr1["DataType"] =0;
-                                dr1["DataYear"] = int.Parse(auditYear);
-                                auxfdetail.Rows.Add(dr1);
+                                if (!string.IsNullOrWhiteSpace(xv.Value))
+                                {
+                                    DataRow dr1 = auxfdetail.NewRow();
+                                    dr1["projectid"] = dbName;
+                                    dr1["Accountcode"] = d.Kmdm;
+                                    dr1["AuxiliaryCode"] = xv.Value;
+                                    dr1["Ncye"] = d.Ncye;
+                                    dr1["Jfje1"] = d.Jfje1;
+                                    dr1["Dfje1"] = d.Dfje1;
+                                    dr1["FDetailID"] = d.FDetailID;
+                                    dr1["DataType"] = 0;
+                                    dr1["DataYear"] = int.Parse(auditYear);
+                                    auxfdetail.Rows.Add(dr1);
+                                }
                             }
                         }
-                    }
 
-                });
+                    });
+                }
+                string execSQL = " truncate table  " + auxfdetail.TableName;
+                SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+                SqlServerHelper.SqlBulkCopy(auxfdetail, conStr);
             }
-            string execSQL = " truncate table  "+ auxfdetail.TableName;
-            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
-            SqlServerHelper.SqlBulkCopy(auxfdetail, conStr);
-           
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
         
         }
 
-        private void InitVoucher(string conStr)
+        private bool InitVoucher(string conStr)
         {
 
-            string jzpzSQL = " truncate table TBVoucher" +
-                " insert  TBVoucher(VoucherID,Clientid,ProjectID,IncNo,Date,Period,Pzh,Djh,AccountCode,Zy,Jfje,Dfje,jfsl,fsje,jd,dfsl, ZDR,dfkm,Wbdm,Wbje,Hl,fllx,FDetailID) ";
-            jzpzSQL += "select  newid() as VoucherID,'" + clientID + "' as clientID, '" + dbName + "' as ProjectID,IncNo, Pz_Date as [date],Kjqj as Period ,Pzh,fjzs as Djh,Kmdm as AccountCode ," +
-               " zy,case when jd = '借' then rmb else 0 end as jfje,  " +
-               " case when jd = '贷' then rmb else 0 end as dfje,  " +
-               " case when jd = '借' then isnull(sl,0)  else 0 end as jfsl,  " +
-               " case when jd = '借' and rmb>0	then 1 else -1 end *(rmb) as fsje," +
-               " case when jd = '借' and rmb>0	then 1 else -1 end	as jd, " +
-               " case when jd = '贷' then isnull(sl,0)  else 0 end as dfsl,  sr as ZDR, DFKM,Wbdm,Wbje,isnull(Hl,0) as Hl,  1 as fllx, FDetailID from jzpz ";
-            SqlMapperUtil.CMDExcute(jzpzSQL, null, conStr);
-
-            string expzk = " select 	Pzk_TableName	from	pzk	where	Pzk_TableName!='jzpz' and Pzk_TableName like 'jzpz%' ";
-            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(expzk, null, conStr);
-            string pzkname = "jzpz";
-            foreach (var d in ds)
+            try
             {
-                jzpzSQL = jzpzSQL.Replace("from "+pzkname, "from "+d.Pzk_TableName).Replace("truncate table TBVoucher","");
+                string jzpzSQL = " truncate table TBVoucher" +
+                    " insert  TBVoucher(VoucherID,Clientid,ProjectID,IncNo,Date,Period,Pzh,Djh,AccountCode,Zy,Jfje,Dfje,jfsl,fsje,jd,dfsl, ZDR,dfkm,Wbdm,Wbje,Hl,fllx,FDetailID) ";
+                jzpzSQL += "select  newid() as VoucherID,'" + clientID + "' as clientID, '" + dbName + "' as ProjectID,IncNo, Pz_Date as [date],Kjqj as Period ,Pzh,fjzs as Djh,Kmdm as AccountCode ," +
+                   " zy,case when jd = '借' then rmb else 0 end as jfje,  " +
+                   " case when jd = '贷' then rmb else 0 end as dfje,  " +
+                   " case when jd = '借' then isnull(sl,0)  else 0 end as jfsl,  " +
+                   " case when jd = '借' and rmb>0	then 1 else -1 end *(rmb) as fsje," +
+                   " case when jd = '借' and rmb>0	then 1 else -1 end	as jd, " +
+                   " case when jd = '贷' then isnull(sl,0)  else 0 end as dfsl,  sr as ZDR, DFKM,Wbdm,Wbje,isnull(Hl,0) as Hl,  1 as fllx, FDetailID from jzpz ";
                 SqlMapperUtil.CMDExcute(jzpzSQL, null, conStr);
-                pzkname = d.Pzk_TableName;
-            }
-            string incNoSql = ";with t1 as( select ROW_NUMBER() OVER (ORDER BY period) AS RowNumber,	period,pzh from TBVoucher group by period,pzh	having  COUNT(period)>1 AND count(pzh)>1)" +
-               "   update vv set vv.IncNo = v.RowNumber  from TBVoucher vv  ,	t1 v    where vv.period = v.period and vv.pzh = v.pzh; ";
-            SqlMapperUtil.CMDExcute(incNoSql, null, conStr);
 
-            string updatesql = " update v set v.fllx = case when a.Syjz = 0 then 1 else a.Syjz end   from dbo.tbvoucher v     join ACCOUNT a on a.AccountCode = v.AccountCode  ";
-            SqlMapperUtil.CMDExcute(updatesql, null, conStr);
-            
+                string expzk = " select 	Pzk_TableName	from	pzk	where	Pzk_TableName!='jzpz' and Pzk_TableName like 'jzpz%' ";
+                dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(expzk, null, conStr);
+                string pzkname = "jzpz";
+                foreach (var d in ds)
+                {
+                    jzpzSQL = jzpzSQL.Replace("from " + pzkname, "from " + d.Pzk_TableName).Replace("truncate table TBVoucher", "");
+                    SqlMapperUtil.CMDExcute(jzpzSQL, null, conStr);
+                    pzkname = d.Pzk_TableName;
+                }
+                string incNoSql = ";with t1 as( select ROW_NUMBER() OVER (ORDER BY period) AS RowNumber,	period,pzh from TBVoucher group by period,pzh	having  COUNT(period)>1 AND count(pzh)>1)" +
+                   "   update vv set vv.IncNo = v.RowNumber  from TBVoucher vv  ,	t1 v    where vv.period = v.period and vv.pzh = v.pzh; ";
+                SqlMapperUtil.CMDExcute(incNoSql, null, conStr);
+
+                string updatesql = " update v set v.fllx = case when a.Syjz = 0 then 1 else a.Syjz end   from dbo.tbvoucher v     join ACCOUNT a on a.AccountCode = v.AccountCode  ";
+                SqlMapperUtil.CMDExcute(updatesql, null, conStr);
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
         }
  
 
-        private void InitAccount(string conStr)
+        private bool InitAccount(string conStr)
         {
-            DataTable accountTable = new DataTable();
-            accountTable.TableName = "ACCOUNT";
-            accountTable.Columns.Add("ProjectID");
-            accountTable.Columns.Add("AccountCode");
-            accountTable.Columns.Add("UpperCode");
-            accountTable.Columns.Add("AccountName");
-            //accountTable.Columns.Add("Attribute",typeof(int));
-            accountTable.Columns.Add("Jd", typeof(int));
-            accountTable.Columns.Add("Hsxms", typeof(int));
-            accountTable.Columns.Add("TypeCode");
-            accountTable.Columns.Add("Jb", typeof(int));
-            accountTable.Columns.Add("IsMx", typeof(int));
-            accountTable.Columns.Add("Ncye",typeof(decimal));
-            accountTable.Columns.Add("Qqccgz", typeof(decimal));
-            accountTable.Columns.Add("Jfje", typeof(decimal));
-            accountTable.Columns.Add("Dfje", typeof(decimal));
-            accountTable.Columns.Add("Ncsl", typeof(int));
-            accountTable.Columns.Add("Syjz", typeof(int));
-            //按级别排序
-            string qsql = "SELECT km.kmdm,km.kmmc,Xmhs,Kmjb,IsMx,Ncye,Jfje1,Dfje1,Ncsl  FROM KM   left join kmye  on km.kmdm = kmye.kmdm  order by Kmjb";
-            dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
-            foreach (var vd in ds)
+            try
             {
-               DataRow dr = accountTable.NewRow();
-               dr["ProjectID"] = dbName;
-                dr["AccountCode"] = vd.kmdm;
-                dr["UpperCode"] ="";
-                dr["AccountName"] = vd.kmmc;
-                //dr["Attribute"] = vd.KM_TYPE == "损益" ? 1 : 0;
-                dr["Jd"] = 1;//default(1)
-                dr["Hsxms"] = 0;
-                dr["TypeCode"] = "";
-                dr["Jb"] = vd.Kmjb;
-                dr["IsMx"] = vd.IsMx==null?0:1;
-                dr["Ncye"] = vd.Ncye == null ? 0M : vd.Ncye;
-                dr["Qqccgz"] = 0M;
-                dr["Jfje"] = vd.Jfje1 == null ? 0M : vd.Jfje1;
-                dr["Dfje"] = vd.Dfje1 == null ? 0M : vd.Dfje1;
-                dr["Ncsl"] = vd.Ncsl == null ? 0M : vd.Ncsl;
-                dr["Syjz"] = 0; 
-                accountTable.Rows.Add(dr);               
+                DataTable accountTable = new DataTable();
+                accountTable.TableName = "ACCOUNT";
+                accountTable.Columns.Add("ProjectID");
+                accountTable.Columns.Add("AccountCode");
+                accountTable.Columns.Add("UpperCode");
+                accountTable.Columns.Add("AccountName");
+                //accountTable.Columns.Add("Attribute",typeof(int));
+                accountTable.Columns.Add("Jd", typeof(int));
+                accountTable.Columns.Add("Hsxms", typeof(int));
+                accountTable.Columns.Add("TypeCode");
+                accountTable.Columns.Add("Jb", typeof(int));
+                accountTable.Columns.Add("IsMx", typeof(int));
+                accountTable.Columns.Add("Ncye", typeof(decimal));
+                accountTable.Columns.Add("Qqccgz", typeof(decimal));
+                accountTable.Columns.Add("Jfje", typeof(decimal));
+                accountTable.Columns.Add("Dfje", typeof(decimal));
+                accountTable.Columns.Add("Ncsl", typeof(int));
+                accountTable.Columns.Add("Syjz", typeof(int));
+                //按级别排序
+                string qsql = "SELECT km.kmdm,km.kmmc,Xmhs,Kmjb,IsMx,Ncye,Jfje1,Dfje1,Ncsl  FROM KM   left join kmye  on km.kmdm = kmye.kmdm  order by Kmjb";
+                dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
+                foreach (var vd in ds)
+                {
+                    DataRow dr = accountTable.NewRow();
+                    dr["ProjectID"] = dbName;
+                    dr["AccountCode"] = vd.kmdm;
+                    dr["UpperCode"] = "";
+                    dr["AccountName"] = vd.kmmc;
+                    //dr["Attribute"] = vd.KM_TYPE == "损益" ? 1 : 0;
+                    dr["Jd"] = 1;//default(1)
+                    dr["Hsxms"] = 0;
+                    dr["TypeCode"] = "";
+                    dr["Jb"] = vd.Kmjb;
+                    dr["IsMx"] = vd.IsMx == null ? 0 : 1;
+                    dr["Ncye"] = vd.Ncye == null ? 0M : vd.Ncye;
+                    dr["Qqccgz"] = 0M;
+                    dr["Jfje"] = vd.Jfje1 == null ? 0M : vd.Jfje1;
+                    dr["Dfje"] = vd.Dfje1 == null ? 0M : vd.Dfje1;
+                    dr["Ncsl"] = vd.Ncsl == null ? 0M : vd.Ncsl;
+                    dr["Syjz"] = 0;
+                    accountTable.Rows.Add(dr);
+                }
+                BuildUpperCode(accountTable, conStr);
+                BuildTypeCode(accountTable, conStr);
+                string execSQL = " truncate table ACCOUNT ";
+                SqlMapperUtil.CMDExcute(execSQL, null, conStr);
+                SqlServerHelper.SqlBulkCopy(accountTable, conStr);
             }
-            BuildUpperCode(accountTable,conStr);
-            BuildTypeCode(accountTable, conStr);
-            string execSQL = " truncate table ACCOUNT ";
-            SqlMapperUtil.CMDExcute(execSQL, null, conStr);
-            SqlServerHelper.SqlBulkCopy(accountTable, conStr);
-
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
            
         }
 
@@ -789,19 +875,26 @@ namespace XJY2EAS
             }
         }
 
-        private void InitProject(string conStr)
-        { 
-            string projectsql = " truncate table PROJECT  ; INSERT  PROJECT   SELECT Distinct '" + dbName + "', LEFT(XMDM, CHARINDEX('.', XMDM)),XMDM,isnull(XMMC,space(0)),NULL,XMJB,XMMX     FROM XM " +
-                " ; update PROJECT set ProjectCode=LTRIM(rtrim(ProjectCode)),TypeCode=LTRIM(rtrim(TypeCode))  ";
-            SqlMapperUtil.CMDExcute(projectsql, null, conStr);
-            string jbsql = "update  p1 set  p1.UPPERCODE = p2.PROJECTCODE  from ProJect p1 join ProJect p2 on p1.JB =p2.JB+1  and p1.TYPECODE = p2.TYPECODE   and  left(p1.PROJECTCODE,len(p2.PROJECTCODE)) = p2.PROJECTCODE and p1.jb>1 ";
-            SqlMapperUtil.CMDExcute(jbsql, null, conStr);
+        private bool InitProject(string conStr)
+        {
+            try
+            {
+                string projectsql = " truncate table PROJECT  ; INSERT  PROJECT   SELECT Distinct '" + dbName + "', LEFT(XMDM, CHARINDEX('.', XMDM)),XMDM,isnull(XMMC,space(0)),NULL,XMJB,XMMX     FROM XM " +
+                    " ; update PROJECT set ProjectCode=LTRIM(rtrim(ProjectCode)),TypeCode=LTRIM(rtrim(TypeCode))  ";
+                SqlMapperUtil.CMDExcute(projectsql, null, conStr);
+                string jbsql = "update  p1 set  p1.UPPERCODE = p2.PROJECTCODE  from ProJect p1 join ProJect p2 on p1.JB =p2.JB+1  and p1.TYPECODE = p2.TYPECODE   and  left(p1.PROJECTCODE,len(p2.PROJECTCODE)) = p2.PROJECTCODE and p1.jb>1 ";
+                SqlMapperUtil.CMDExcute(jbsql, null, conStr);
 
-            string projecttypesql = " truncate table ProjectType  ; INSERT  ProjectType  SELECT   '" + dbName + "', FITEMID,FName FROM t_itemclass" +
-                " ; update  PROJECTTYPE set TypeCode=LTRIM(rtrim(TypeCode))   ";
-            SqlMapperUtil.CMDExcute(projecttypesql, null, conStr);
-
-           
+                string projecttypesql = " truncate table ProjectType  ; INSERT  ProjectType  SELECT   '" + dbName + "', FITEMID,FName FROM t_itemclass" +
+                    " ; update  PROJECTTYPE set TypeCode=LTRIM(rtrim(TypeCode))   ";
+                SqlMapperUtil.CMDExcute(projecttypesql, null, conStr);
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                return false;
+            }
+            return true;
         }
 
 
