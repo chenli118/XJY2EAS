@@ -754,6 +754,13 @@ namespace XJY2EAS
         {
             try
             {
+                string sql = "select 1 as be from km where Kmdm !=Kmdm_Jd";
+                object ret = DapperHelper<int>.Create(conStr).ExecuteScalar(sql,null);
+                if (ret != null)
+                {
+                    MessageBox.Show("Kmdm !=Kmdm_jd");
+                    return false;
+                }
                 DataTable accountTable = new DataTable();
                 accountTable.TableName = "ACCOUNT";
                 accountTable.Columns.Add("ProjectID");
@@ -774,7 +781,8 @@ namespace XJY2EAS
                 accountTable.Columns.Add("Syjz", typeof(int));
                 //按级别排序
                 string qsql = "SELECT km.kmdm,km.kmmc,Xmhs,Kmjb,IsMx,Ncye,Jfje1,Dfje1,Ncsl  FROM KM   left join kmye  on km.kmdm = kmye.kmdm  order by Kmjb";
-                dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);
+                dynamic ds = SqlMapperUtil.SqlWithParams<dynamic>(qsql, null, conStr);    
+                
                 foreach (var vd in ds)
                 {
                     DataRow dr = accountTable.NewRow();

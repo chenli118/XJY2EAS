@@ -285,8 +285,14 @@ namespace XJY2EAS
         /// <summary>
         /// 数据库连接字符串
         /// </summary>
-        private static  readonly string connectionString = ConfigurationManager.AppSettings["ConString"];
+        private static  string connectionString = ConfigurationManager.AppSettings["ConString"];
 
+        public static DapperHelper<T> Create(string conStr)
+        {
+            connectionString = conStr;
+            return new DapperHelper<T>();
+        }
+            
         
 
         /// <summary>
@@ -295,7 +301,7 @@ namespace XJY2EAS
         /// <param name="sql">查询的sql</param>
         /// <param name="param">替换参数</param>
         /// <returns></returns>
-        public static List<T> Query(string sql, object param)
+        public  List<T> Query(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -308,7 +314,7 @@ namespace XJY2EAS
         /// <param name="sql">查询的sql</param>
         /// <param name="param">替换参数</param>
         /// <returns></returns>
-        public static List<T> QuerySP(string spName, object param)
+        public  List<T> QuerySP(string spName, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -322,7 +328,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static T QueryFirst(string sql, object param)
+        public  T QueryFirst(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -336,7 +342,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static T QueryFirstOrDefault(string sql, object param)
+        public  T QueryFirstOrDefault(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -350,7 +356,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static T QuerySingle(string sql, object param)
+        public  T QuerySingle(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -364,7 +370,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static T QuerySingleOrDefault(string sql, object param)
+        public  T QuerySingleOrDefault(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -378,7 +384,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static int Execute(string sql, object param)
+        public  int Execute(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -392,7 +398,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static int ExecuteSP(string spName, object param)
+        public  int ExecuteSP(string spName, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -415,7 +421,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static IDataReader ExecuteReader(string sql, object param)
+        public  IDataReader ExecuteReader(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -429,7 +435,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static object ExecuteScalar(string sql, object param)
+        public  object ExecuteScalar(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -443,7 +449,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static T ExecuteScalarForT(string sql, object param)
+        public  T ExecuteScalarForT(string sql, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -457,7 +463,7 @@ namespace XJY2EAS
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static List<T> ExecutePro(string proc, object param)
+        public  List<T> ExecutePro(string proc, object param)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -478,7 +484,7 @@ namespace XJY2EAS
         /// <param name="sqlarr">多条SQL</param>
         /// <param name="param">param</param>
         /// <returns></returns>
-        public static int ExecuteTransaction(string[] sqlarr)
+        public  int ExecuteTransaction(string[] sqlarr)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -513,7 +519,7 @@ namespace XJY2EAS
         /// <param name="Key">多条SQL</param>
         /// <param name="Value">param</param>
         /// <returns></returns>
-        public static int ExecuteTransaction(Dictionary<string, object> dic)
+        public  int ExecuteTransaction(Dictionary<string, object> dic)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
