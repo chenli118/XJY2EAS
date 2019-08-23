@@ -66,15 +66,21 @@ namespace XJY2EAS
             stepRet= GetPeriod(conStr);
             if (!stepRet) return;
             backgroundWorker1.ReportProgress(39, "更新期间范围完成!");
-            backgroundWorker1.ReportProgress(39, "开始装入AuxiliaryFDetail数据...");
-            stepRet =InitFdetail(conStr);
-            if (!stepRet) return;
-            backgroundWorker1.ReportProgress(45, "AuxiliaryFDetail数据加载完成！");
-            Thread.Sleep(1000);
-            backgroundWorker1.ReportProgress(45, "开始装入TBAux数据...");
-            stepRet = InitTBAux(conStr);
-            if (!stepRet) return;
-            backgroundWorker1.ReportProgress(50, "TBAux数据加载完成！");
+
+            bool isBaseAccount = GetIsExsitsItemClass();
+            if (isBaseAccount)
+            {
+                backgroundWorker1.ReportProgress(39, "开始装入AuxiliaryFDetail数据...");
+                stepRet = InitFdetail(conStr);
+                if (!stepRet) return;
+                backgroundWorker1.ReportProgress(45, "AuxiliaryFDetail数据加载完成！");
+                Thread.Sleep(1000);
+                backgroundWorker1.ReportProgress(45, "开始装入TBAux数据...");
+                stepRet = InitTBAux(conStr);
+                if (!stepRet) return;
+                backgroundWorker1.ReportProgress(50, "TBAux数据加载完成！");
+            }
+
             backgroundWorker1.ReportProgress(50, "开始装入业务循环报表数据...");
             stepRet = InitTBFS(conStr);
             if (!stepRet) return;
@@ -92,6 +98,13 @@ namespace XJY2EAS
             //UpdateTbDetailISMXISAUXISACCMX
             //UpdateTBfsandTBaccbyTBGrouping
              
+        }
+
+        private bool GetIsExsitsItemClass()
+        {
+            string sql = "select 1 as be from t_itemclass";
+            object ret = DapperHelper<int>.Create(conStr).ExecuteScalar(sql, null);
+            return ret != null;
         }
 
         private void BackgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
