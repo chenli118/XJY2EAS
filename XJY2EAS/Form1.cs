@@ -753,6 +753,8 @@ namespace XJY2EAS
 
                 string updatesql = " update v set v.fllx = case when a.Syjz = 0 then 1 else a.Syjz end   from dbo.tbvoucher v     join ACCOUNT a on a.AccountCode = v.AccountCode  ";
                 SqlMapperUtil.CMDExcute(updatesql, null, conStr);
+                updatesql = "update z set z.HashCode =HASHBYTES('SHA1', (select z.* FOR XML RAW, BINARY BASE64)) from  TBVoucher  z";
+                SqlMapperUtil.CMDExcute(updatesql, null, conStr);
             }
             catch (Exception err)
             {

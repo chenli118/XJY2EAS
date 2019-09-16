@@ -195,6 +195,7 @@ if exists (select 1
    drop table TBVoucher
 go
 create table dbo.TBVoucher (
+   HashCode				binary(20) null,
    VoucherID            varchar(50)          collate Chinese_PRC_CS_AS_KS_WS not null default newid(),
    Clientid             varchar(100)         not null,
    ProjectID            varchar(100)         collate Chinese_PRC_CS_AS_KS_WS not null,
